@@ -1,0 +1,37 @@
+132-  calculateNextStreak,
+133-  calculateXpGain,
+134-  Exercise as ProgressionExercise,
+135-} from "./utils/progression";
+136-
+137:const KHANI_LOGO = "/khani.png";
+138-
+139-// Initialize Firebase
+140-const app = initializeApp(firebaseConfig);
+141-const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+142-
+--
+839-    }
+840-    transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
+841-    className={`${className} relative overflow-hidden rounded-full bg-[#1a1c2c] border-4 border-amber-900/30 shadow-xl ${onClick ? "cursor-pointer" : ""}`}
+842-  >
+843-    <img
+844:      src={KHANI_LOGO}
+845-      onError={(e) => {
+846:        if (e.currentTarget.src.includes(KHANI_LOGO)) {
+847-          e.currentTarget.src = "khani.png";
+848-        }
+849-      }}
+850-      alt="Ehmedê Xanî"
+851-      className={`w-full h-full object-contain scale-110 brightness-110 contrast-110 ${mood === "thinking" ? "grayscale" : ""}`}
+--
+4543-          className={`hidden lg:flex fixed top-0 bottom-0 ${isRTL ? "right-0" : "left-0"} w-72 theme-bg-soft backdrop-blur-3xl border-x theme-border-soft flex-col p-8 z-50`}
+4544-        >
+4545-          <div className="flex items-center gap-3 mb-12 px-1">
+4546-            <div className="w-10 h-10 theme-bg-primary rounded-xl flex items-center justify-center p-1 shadow-lg theme-shadow-primary overflow-hidden">
+4547-              <img
+4548:                src={KHANI_LOGO}
+4549-                alt="Logo"
+4550-                className="w-[120%] h-[120%] object-contain"
+4551-              />
+4552-            </div>
+4553-            <div>

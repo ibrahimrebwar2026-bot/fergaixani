@@ -1,1 +1,0 @@
-                                          const list = appConfig.dialectSchoolContent[activeAdminDialect].filter((_: any, i: number) => i !== idx);

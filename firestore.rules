@@ -10,6 +10,21 @@ service cloud.firestore {
     function isSignedIn() {
       return request.auth != null;
     }
+
+    function isAdmin() {
+      return request.auth != null && (
+        request.auth.uid == '2jRQzIcFHvcK0YcnqkfdmQ4rPPk2' ||
+        ("email" in request.auth.token && (
+          request.auth.token.email == 'ibrahimrebwar2026@gmail.com' ||
+          request.auth.token.email == 'ibrahimrebwr2026@gmail.com'
+        ))
+      );
+    }
+
+    match /app/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
     
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
@@ -29,15 +44,6 @@ service cloud.firestore {
 
     match /test/connection {
       allow read: if true;
-    }
-
-    function isAdmin() {
-      return isSignedIn() && (request.auth.token.email == 'ibrahimrebwar2026@gmail.com' || request.auth.token.email == 'ibrahimrebwr2026@gmail.com') && request.auth.token.email_verified == true;
-    }
-
-    match /app/global {
-      allow read: if true;
-      allow write: if isAdmin();
     }
 
     match /users/{userId} {

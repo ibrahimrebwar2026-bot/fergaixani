@@ -81,9 +81,21 @@
           "type": "object",
           "description": "Dynamic UI labels and translations"
         },
-        "tabs": {
+        "extraTabs": {
           "type": "array",
           "description": "Dynamic app tabs/sections"
+        },
+        "dialectSchoolContent": {
+          "type": "object",
+          "description": "Categorized educational content for different dialects"
+        },
+        "customDictionary": {
+          "type": "array",
+          "description": "User-contributed or admin-edited dictionary words"
+        },
+        "lessonOverrides": {
+          "type": "object",
+          "description": "Override specific lesson content or grammar templates"
         },
         "announcement": {
           "type": "string",
@@ -96,6 +108,16 @@
     "/app/global": {
       "schema": "AppConfig",
       "description": "Global settings for the application"
+    },
+    "/app/global/dialects/{dialectId}": {
+      "schema": {
+        "title": "DialectContent",
+        "type": "object",
+        "properties": {
+          "topics": { "type": "array" }
+        }
+      },
+      "description": "Educational content for a specific dialect"
     },
     "/users/{userId}": {
       "schema": "User",

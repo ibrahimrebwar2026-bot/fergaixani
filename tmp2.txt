@@ -1,0 +1,26 @@
+                                : "theme-bg-card theme-border-soft theme-text-soft hover:theme-bg-soft"
+                                  : "theme-bg-card theme-border-soft theme-text hover:theme-bg-soft"
+                                    : "theme-bg-card theme-border-soft theme-text-soft hover:theme-bg-soft"
+                                      : "theme-bg-card theme-border-soft theme-text-soft hover:theme-bg-soft"
+                                  className="w-full px-6 py-3 theme-bg-soft border theme-border-soft rounded-2xl theme-text font-bold focus:outline-none theme-border-primary transition-all text-center"
+                            className="mt-8 flex items-center gap-2 px-6 py-2 theme-bg-soft rounded-full text-[10px] font-black uppercase theme-text hover:theme-bg-soft-20 transition-all tracking-widest"
+                              className={`flex-1 py-4 rounded-2xl font-black transition-all border ${interfaceLang === i ? "theme-bg-primary text-white theme-border-primary shadow-2xl" : "theme-bg-soft theme-text-muted theme-border-soft-50 hover:theme-bg-soft-20"}`}
+                            className={`flex-1 py-3 rounded-xl font-black transition-all border ${dailyGoal === goal ? "theme-bg-primary text-white theme-border-primary shadow-lg" : "theme-bg-soft theme-text-muted theme-border-soft-50"}`}
+                      <div className="flex items-center justify-between p-6 theme-bg-soft rounded-[2rem] border theme-border-soft w-full">
+                        <div className="p-8 theme-bg-card border theme-border-soft rounded-[2.5rem] relative overflow-hidden group hover:theme-bg-soft transition-all duration-500">
+                        <div className="p-8 theme-bg-card border theme-border-soft rounded-[2.5rem] relative overflow-hidden group hover:theme-bg-soft transition-all duration-500">
+                        <div className="p-8 theme-bg-card border theme-border-soft rounded-[2.5rem] relative overflow-hidden group hover:theme-bg-soft transition-all duration-500">
+                    <div className="w-16 h-16 theme-bg-soft rounded-[1.5rem] flex items-center justify-center shadow-2xl border theme-border-soft">
+                        <div className="flex-1 mx-8 h-2 theme-bg-soft rounded-full overflow-hidden border theme-border-soft">
+                                <div className="mb-8 theme-bg-soft w-16 h-16 rounded-2xl flex items-center justify-center border theme-border-soft">
+                                className="absolute inset-0 w-full h-full theme-bg-soft border-2 theme-border-soft rounded-[3.5rem] shadow-2xl flex flex-col items-center justify-center p-12 backface-hidden"
+                            : "theme-text opacity-40 hover:opacity-100 hover:theme-bg-soft"
+                              className={`flex items-center justify-between p-5 rounded-[2rem] border transition-all relative overflow-hidden group cursor-pointer hover:scale-[1.02] active:scale-[0.98] ${u.id === user?.uid ? "theme-bg-soft border-yellow-400/30 shadow-2xl" : "theme-bg-card theme-border-soft"}`}
+                                <div className="w-12 h-12 rounded-2xl theme-bg-soft border theme-border-soft flex items-center justify-center group-hover:theme-bg-primary transition-colors">
+                            <div className="w-20 h-20 theme-bg-soft rounded-full flex items-center justify-center mx-auto mb-6 border theme-border-soft">
+                              className={`p-8 rounded-[2.5rem] border transition-all flex flex-col items-center text-center group ${isEarned ? "theme-bg-soft theme-border-soft-50 shadow-xl" : "theme-bg-card opacity-20 saturate-0 grayscale"}`}
+                    <div className="p-6 theme-bg-soft rounded-3xl border theme-border-soft flex flex-col items-center justify-center">
+                    <div className="p-6 theme-bg-soft rounded-3xl border theme-border-soft flex flex-col items-center justify-center">
+              <div className="w-full theme-bg-soft h-4 rounded-full overflow-hidden border theme-border-soft p-1">
+                    className="py-5 rounded-3xl font-black text-white/50 border-2 border-white/10 hover:theme-bg-soft transition-all"
+          className="ms-auto w-1.5 h-1.5 theme-bg-soft rounded-full opacity-60"
