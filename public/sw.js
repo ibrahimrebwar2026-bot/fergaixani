@@ -103,3 +103,10 @@ self.addEventListener('fetch', (event) => {
     })
   );
 });
+
+// Listener for SKIP_WAITING message
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});

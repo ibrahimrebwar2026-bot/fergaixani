@@ -21,9 +21,24 @@ service cloud.firestore {
       );
     }
 
-    match /app/{allPaths=**} {
+    match /app/global {
       allow read: if true;
       allow write: if isAdmin();
+
+      match /dialects/{dialectId} {
+        allow read: if true;
+        allow write: if isAdmin();
+      }
+
+      match /overrides/{overrideId} {
+        allow read: if true;
+        allow write: if isAdmin();
+      }
+
+      match /dictionary/{wordId} {
+        allow read: if true;
+        allow write: if isAdmin();
+      }
     }
     
     function isOwner(userId) {

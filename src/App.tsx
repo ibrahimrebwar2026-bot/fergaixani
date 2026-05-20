@@ -60,6 +60,7 @@ import {
   Info,
   ScrollText,
   Languages,
+  Menu,
   Type,
   Quote,
   Layers,
@@ -413,6 +414,9 @@ const dialectThemes: Record<TargetDialect, any> = {
 
 const BackgroundBlobs = ({ dialect }: { dialect: TargetDialect }) => {
   const theme = dialectThemes[dialect] || dialectThemes.Sorani;
+  const primaryRgb = hexToRgb(theme.primary);
+  const accentRgb = hexToRgb(theme.accent);
+  const secondaryRgb = hexToRgb(theme.secondary);
   return (
     <div className="fixed inset-0 overflow-hidden pointer-events-none -z-50 bg-black">
       {/* Base cinematic gradient */}
@@ -420,36 +424,25 @@ const BackgroundBlobs = ({ dialect }: { dialect: TargetDialect }) => {
         className={`absolute inset-0 bg-gradient-to-br ${theme.gradient} opacity-90`}
       />
 
-      {/* Noise texture for tenderness / filmic quality */}
-      <div
-        className="absolute inset-0 opacity-[0.035] mix-blend-overlay"
-        style={{
-          backgroundImage:
-            'url("data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noiseFilter%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.85%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noiseFilter)%22/%3E%3C/svg%3E")',
-        }}
-      ></div>
-
-      {/* Kurdistan Sun - Faint Background */}
-      <div className="absolute inset-0 flex items-center justify-center opacity-15 mix-blend-screen overflow-hidden">
+      {/* Kurdistan Sun - Faint Background (Optimized: static high-performance rendering without constant GPU repaints) */}
+      <div className="absolute inset-0 flex items-center justify-center opacity-10 mix-blend-screen overflow-hidden">
         <img
           src="/KURDISTANSUN.png"
           alt=""
-          className="w-[150%] max-w-[600px] object-contain animate-[spin_240s_linear_infinite] blur-[1px]"
+          className="w-[150%] max-w-[600px] object-contain select-none"
         />
       </div>
 
-      {/* Glowing Orbs (Strength, Spirit, Tenderness) */}
-      <div
-        className="absolute top-[-15%] left-[-10%] w-[60%] h-[60%] rounded-full opacity-20 blur-[140px] animate-blob mix-blend-screen"
-        style={{ backgroundColor: theme.primary }}
-      />
-      <div
-        className="absolute bottom-[-10%] right-[-10%] w-[70%] h-[70%] rounded-full opacity-[0.15] blur-[130px] animate-blob animation-delay-2000 mix-blend-screen"
-        style={{ backgroundColor: theme.accent }}
-      />
-      <div
-        className="absolute top-[20%] right-[20%] w-[50%] h-[50%] rounded-full opacity-[0.15] blur-[120px] animate-blob animation-delay-4000 mix-blend-screen"
-        style={{ backgroundColor: theme.secondary }}
+      {/* Radial ambient glow (Optimized: hardware-accelerated radial gradients, 0ms render time) */}
+      <div 
+        className="absolute inset-0 mix-blend-screen opacity-15"
+        style={{
+          background: `
+            radial-gradient(circle at 15% 15%, rgba(${primaryRgb}, 0.5) 0%, rgba(0,0,0,0) 65%),
+            radial-gradient(circle at 85% 85%, rgba(${accentRgb}, 0.3) 0%, rgba(0,0,0,0) 55%),
+            radial-gradient(circle at 75% 25%, rgba(${secondaryRgb}, 0.3) 0%, rgba(0,0,0,0) 50%)
+          `
+        }}
       />
       {/* Subtle Vignette */}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(0,0,0,0.8)_100%)]"></div>
@@ -505,9 +498,9 @@ const ThemeInjected = ({
                 --ring: ${theme.ring};
                 --page-bg: ${pageBg};
                 --page-text: ${pageText};
-                --card-bg: ${isDark ? "rgba(8, 8, 12, 0.15)" : "rgba(255, 255, 255, 0.75)"};
-                --card-border: ${isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.08)"};
-                --glass-bg: ${isDark ? "rgba(5, 5, 10, 0.3)" : "rgba(255, 255, 255, 0.9)"};
+                --card-bg: ${isDark ? "rgba(12, 12, 16, 0.85)" : "rgba(255, 255, 255, 0.95)"};
+                --card-border: ${isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.08)"};
+                --glass-bg: ${isDark ? "rgba(16, 16, 22, 0.92)" : "rgba(255, 255, 255, 0.98)"};
                 --smooth-shadow: ${isDark ? "0 40px 80px -20px rgba(0,0,0,0.8), inset 0 1px 1px rgba(255,255,255,0.08)" : "0 20px 50px -10px rgba(0,0,0,0.1), inset 0 1px 1px rgba(255,255,255,1)"};
             }
             body { 
@@ -537,11 +530,9 @@ const ThemeInjected = ({
             .theme-card, .theme-bg-card { 
                 background-color: var(--card-bg);
                 border: 1px solid var(--card-border);
-                backdrop-filter: blur(12px);
-                -webkit-backdrop-filter: blur(12px);
                 box-shadow: var(--smooth-shadow);
                 border-radius: 2.2rem;
-                transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+                transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.3s, border-color 0.3s, box-shadow 0.3s;
             }
             
             .theme-card:hover, .theme-bg-card:hover {
@@ -838,16 +829,15 @@ const KhaniPoetMascot = ({
 }) => (
   <motion.div
     onClick={onClick}
-    whileHover={onClick ? { scale: 1.05, rotate: [0, -2, 2, 0] } : {}}
-    whileTap={onClick ? { scale: 0.95 } : {}}
-    animate={
-      mood === "happy"
-        ? { y: [0, -5, 0], scale: [1, 1.02, 1] }
-        : mood === "thinking"
-          ? { scale: [1, 0.98, 1], rotate: [-1, 1, -1] }
-          : {}
-    }
-    transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
+    initial={{ scale: 0.95, opacity: 0 }}
+    animate={{ scale: 1, opacity: 1 }}
+    whileHover={{ 
+      scale: 1.04, 
+      y: -3,
+      rotate: mood === "happy" ? 1.5 : mood === "thinking" ? -1.5 : 0 
+    }}
+    whileTap={{ scale: 0.97 }}
+    transition={{ duration: 0.2, ease: "easeOut" }}
     className={`${className} relative overflow-hidden rounded-full bg-[#1a1c2c] border-4 border-amber-900/30 shadow-xl ${onClick ? "cursor-pointer" : ""}`}
   >
     <img
@@ -2796,101 +2786,39 @@ export default function App() {
       let currentSchool: any = {};
       let currentOverrides: any = {};
       let currentDict: any[] = [];
+      let timeoutId: any = null;
 
       const updateConfig = () => {
         if (!currentGlobal) return;
-        setAppConfig({
-          ...currentGlobal,
-          dialectSchoolContent: {
-            ...(currentGlobal.dialectSchoolContent || {}),
-            ...currentSchool,
-          },
-          lessonOverrides: {
-            ...(currentGlobal.lessonOverrides || {}),
-            ...currentOverrides,
-          },
-          customDictionary: [
-            ...((currentGlobal.customDictionary || []) as any[]).filter(
-              (w) => !currentDict.find((dw) => dw.id === (w.id || w.sorani)),
-            ),
-            ...currentDict,
-          ],
-        });
-        setIsConfigLoaded(true);
+        if (timeoutId) clearTimeout(timeoutId);
+        
+        timeoutId = setTimeout(() => {
+          setAppConfig({
+            ...currentGlobal,
+            dialectSchoolContent: {
+              ...(currentGlobal.dialectSchoolContent || {}),
+              ...currentSchool,
+            },
+            lessonOverrides: {
+              ...(currentGlobal.lessonOverrides || {}),
+              ...currentOverrides,
+            },
+            customDictionary: [
+              ...((currentGlobal.customDictionary || []) as any[]).filter(
+                (w) => !currentDict.find((dw) => dw.id === (w.id || w.sorani)),
+              ),
+              ...currentDict,
+            ],
+          });
+          setIsConfigLoaded(true);
+        }, 80);
       };
 
       globalUnsub = onSnapshot(
         doc(db, "app", "global"),
         async (snap) => {
           if (snap.exists()) {
-            const data = snap.data();
-            currentGlobal = data;
-            if (isAdminUser && !migrationAttempted.current) {
-              migrationAttempted.current = true;
-              console.log("Migration check triggered...");
-              try {
-                const updates: any = {};
-                let hasLegacy = false;
-
-                if (
-                  data.dialectSchoolContent &&
-                  Object.keys(data.dialectSchoolContent).length > 0
-                ) {
-                  console.log("Migrating dialectSchoolContent...");
-                  for (const [k, v] of Object.entries(
-                    data.dialectSchoolContent,
-                  )) {
-                    await setDoc(
-                      doc(db, "app", "global", "dialects", k),
-                      { topics: cleanObject(v) },
-                      { merge: true },
-                    );
-                  }
-                  updates.dialectSchoolContent = deleteField();
-                  hasLegacy = true;
-                }
-
-                if (
-                  data.lessonOverrides &&
-                  Object.keys(data.lessonOverrides).length > 0
-                ) {
-                  console.log("Migrating lessonOverrides...");
-                  for (const [k, v] of Object.entries(data.lessonOverrides)) {
-                    await setDoc(
-                      doc(db, "app", "global", "overrides", k),
-                      cleanObject(v),
-                      { merge: true },
-                    );
-                  }
-                  updates.lessonOverrides = deleteField();
-                  hasLegacy = true;
-                }
-
-                if (data.customDictionary && data.customDictionary.length > 0) {
-                  console.log("Migrating customDictionary...");
-                  for (const word of data.customDictionary) {
-                    const id = String(word.id || word.sorani).replace(
-                      /\//g,
-                      "_",
-                    );
-                    await setDoc(
-                      doc(db, "app", "global", "dictionary", id),
-                      cleanObject(word),
-                      { merge: true },
-                    );
-                  }
-                  updates.customDictionary = deleteField();
-                  hasLegacy = true;
-                }
-
-                if (hasLegacy) {
-                  await updateDoc(doc(db, "app", "global"), updates);
-                  console.log("Migration successful.");
-                }
-              } catch (err) {
-                console.error("Migration fatal error:", err);
-              }
-            }
+            currentGlobal = snap.data();
             updateConfig();
           } else {
             currentGlobal = {
@@ -3158,10 +3086,60 @@ export default function App() {
     const saved = localStorage.getItem("ferga_achievements");
     return saved ? JSON.parse(saved) : [];
   });
-  const [activeTab, setActiveTab] = useState<string>("home");
+  const [activeTab, setActiveTab] = useState<string>(() => {
+    const hash = window.location.hash.replace("#", "");
+    return hash || "home";
+  });
+
+  // Direct activeTab hash persistence and dynamic document title handling
+  useEffect(() => {
+    if (activeTab) {
+      if (window.location.hash !== `#${activeTab}`) {
+        window.location.hash = `#${activeTab}`;
+      }
+      
+      // Dynamic page document title update to match standard website behaviors
+      const getPageName = (tab: string) => {
+        switch (tab) {
+          case "home": return interfaceLang === "Sorani" ? "سەرەکی" : "Destpêk";
+          case "grammar": return interfaceLang === "Sorani" ? "ڕێزمان" : "Rêziman";
+          case "translator": return interfaceLang === "Sorani" ? "وەرگێڕ" : "Wergêr";
+          case "flashcards": return interfaceLang === "Sorani" ? "فلاشکارت" : "Flashcards";
+          case "leaderboard": return interfaceLang === "Sorani" ? "پێشەنگەکان" : "Rêzbendî";
+          case "dictionary": return interfaceLang === "Sorani" ? "فەرهەنگ" : "Ferheng";
+          case "school": return interfaceLang === "Sorani" ? "خوێندنگە" : "Dibistan";
+          case "admin": return "Admin Console";
+          case "profile": return interfaceLang === "Sorani" ? "پرۆفایل" : "Profîl";
+          default: return tab.charAt(0).toUpperCase() + tab.slice(1);
+        }
+      };
+      
+      const pageName = getPageName(activeTab);
+      document.title = `${pageName} | Meydan Kurdish`;
+      
+      // Auto scroll back to peak of viewport when clicking website navigation tabs
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, [activeTab, interfaceLang]);
+
+  // Sync hash changes back to React State (allows browser Back / Forward buttons navigating tabs cleanly!)
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace("#", "");
+      if (hash) {
+        setActiveTab(hash);
+      } else {
+        setActiveTab("home");
+      }
+    };
+    window.addEventListener("hashchange", handleHashChange);
+    return () => window.removeEventListener("hashchange", handleHashChange);
+  }, []);
+
   const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
   const [currentFlashcardIdx, setCurrentFlashcardIdx] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [flashcardSessionActive, setFlashcardSessionActive] = useState(false);
   const [editDisplayName, setEditDisplayName] = useState("");
   const [editPhotoURL, setEditPhotoURL] = useState("");
@@ -3799,20 +3777,46 @@ export default function App() {
   const academicDict = useMemo(() => {
     const baseDict = kurdishDictionary.dictionary;
     const extraDict = appConfig?.customDictionary || [];
-    // Merge core and custom - custom overrides core by ID
-    const merged = [...baseDict];
+    
+    // Create plain objects for quick lookup of overrides (avoid Map shadowing)
+    const overrideMapById: Record<string, any> = {};
+    const overrideMapBySorani: Record<string, any> = {};
+    
     extraDict.forEach((customWord: any) => {
-      const idx = merged.findIndex(
-        (w: any) =>
-          (w.id && w.id === customWord.id) || w.sorani === customWord.sorani,
-      );
-      if (idx >= 0) {
-        merged[idx] = { ...merged[idx], ...customWord, isCustom: true };
-      } else {
-        merged.push({ ...customWord, isCustom: true });
+      if (customWord.id) {
+        overrideMapById[String(customWord.id)] = customWord;
+      }
+      if (customWord.sorani) {
+        overrideMapBySorani[String(customWord.sorani)] = customWord;
       }
     });
-    return merged;
+
+    // Merge by mapping over baseDict and matching overrides
+    const mergedCore = baseDict.map((w: any) => {
+      let override = null;
+      if (w.id && overrideMapById[String(w.id)]) {
+        override = overrideMapById[String(w.id)];
+      } else if (w.sorani && overrideMapBySorani[String(w.sorani)]) {
+        override = overrideMapBySorani[String(w.sorani)];
+      }
+      
+      if (override) {
+        return { ...w, ...override, isCustom: true };
+      }
+      return w;
+    });
+
+    // Find any custom words that were NOT in the core baseDict
+    const coreIds = new Set(baseDict.map((w: any) => w.id ? String(w.id) : null).filter(Boolean));
+    const coreSoranis = new Set(baseDict.map((w: any) => w.sorani ? String(w.sorani) : null).filter(Boolean));
+    
+    const addedCustom = extraDict.filter((customWord: any) => {
+      const hasIdMatch = customWord.id && coreIds.has(String(customWord.id));
+      const hasSoraniMatch = customWord.sorani && coreSoranis.has(String(customWord.sorani));
+      return !hasIdMatch && !hasSoraniMatch;
+    }).map((w: any) => ({ ...w, isCustom: true }));
+
+    return [...mergedCore, ...addedCustom];
   }, [appConfig]);
 
   const units = useMemo(
@@ -4101,7 +4105,10 @@ export default function App() {
             transition={{ duration: 4, repeat: Infinity }}
             className="relative w-32 h-32"
           >
-            <div className="absolute inset-0 bg-yellow-400 blur-[60px] opacity-20" />
+            <div
+              className="absolute inset-0 opacity-20"
+              style={{ background: "radial-gradient(circle, rgba(234,179,8,0.6) 0%, rgba(0,0,0,0) 70%)" }}
+            />
             <KhaniPoetMascot className="relative w-full h-full object-contain" />
           </motion.div>
         </div>
@@ -4126,7 +4133,10 @@ export default function App() {
               transition={{ type: "spring", damping: 20, stiffness: 100 }}
               className="w-40 h-40 mx-auto mb-10 relative"
             >
-              <div className="absolute inset-0 theme-bg-primary blur-[80px] opacity-30 rounded-full animate-blob" />
+              <div
+                className="absolute inset-0 opacity-25"
+                style={{ background: "radial-gradient(circle, var(--primary) 0%, rgba(0,0,0,0) 70%)" }}
+              />
               <div className="relative w-full h-full p-0 flex items-center justify-center">
                 <KhaniPoetMascot
                   className="w-[120%] h-[120%] object-contain drop-shadow-2xl"
@@ -4424,7 +4434,10 @@ export default function App() {
                           </div>
                         ) : (
                           <div className="w-40 h-40 mx-auto mb-8 relative">
-                            <div className="absolute inset-0 theme-bg-primary blur-[80px] opacity-30" />
+                            <div
+                              className="absolute inset-0 opacity-25"
+                              style={{ background: "radial-gradient(circle, var(--primary) 0%, rgba(0,0,0,0) 70%)" }}
+                            />
                             <KhaniPoetMascot
                               className="relative w-full h-full object-contain drop-shadow-2xl"
                               mood="happy"
@@ -4709,137 +4722,190 @@ export default function App() {
           </div>
         </div>
 
-        {/* Desktop Sidebar - Premium Style */}
-        <aside
-          className={`hidden lg:flex fixed top-0 bottom-0 ${isRTL ? "right-0" : "left-0"} w-48 lg:w-56 theme-bg-soft backdrop-blur-3xl border-x theme-border-soft flex-col p-4 z-50`}
-        >
-          <div className="flex items-center gap-3 mb-8 px-1">
-            <div className="w-8 h-8 md:w-10 md:h-10 theme-bg-primary rounded-xl flex items-center justify-center p-1 shadow-lg theme-shadow-primary overflow-hidden">
-              <img
-                src={KHANI_LOGO}
-                alt="Logo"
-                className="w-[120%] h-[120%] object-contain"
-              />
-            </div>
-            <div>
-              <h1 className="text-xl font-black theme-text leading-none font-afarin1 tracking-tighter">
-                {interfaceLang === "Sorani" ? "فێرگەی خانی" : "Fêrga Xanî"}
-              </h1>
-              <span className="text-[9px] font-black theme-primary tracking-[0.2em] opacity-60">
-                ACADEMY
-              </span>
-            </div>
-          </div>
+        {/* Sticky Top Global Web Header (Professional Website Navigation) */}
+        <header className="sticky top-0 left-0 right-0 z-50 bg-slate-950/90 backdrop-blur-md border-b border-white/5 shadow-xl">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between">
+            {/* Elegant Brand Logo & Active Scroll Action */}
+            <a
+              href="#home"
+              onClick={() => {
+                playSound(clickAudio);
+                setActiveTab("home");
+              }}
+              className="flex items-center gap-3 group transition-transform duration-300 hover:scale-102"
+            >
+              <div className="w-9 h-9 theme-bg-primary rounded-xl flex items-center justify-center p-1 shadow-lg shadow-yellow-500/20 group-hover:rotate-6 transition-transform overflow-hidden duration-300">
+                <img
+                  src={KHANI_LOGO}
+                  alt="Logo"
+                  className="w-[120%] h-[120%] object-contain"
+                />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-lg font-black text-white leading-none tracking-tight font-afarin1">
+                  {interfaceLang === "Sorani" ? "فێرگەی خانی" : "Fêrga Xanî"}
+                </span>
+                <span className="text-[8px] font-black uppercase text-amber-400 tracking-[0.2em] mt-0.5 opacity-80">
+                  {interfaceLang === "Sorani" ? "ئەکادیمیای کوردی" : "Akademiya Kurdî"}
+                </span>
+              </div>
+            </a>
 
-          <nav className="space-y-1.5 mb-auto">
-            {activeTabsList.map((tab) => (
-              <NavBtn
-                key={tab.id + '-' + tab.label}
-                active={activeTab === tab.id}
+            {/* Middle Section: Desktop Horizontal Menu Tabs */}
+            <nav className="hidden lg:flex items-center gap-1.5">
+              {activeTabsList.map((tab) => {
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={`nav-web-${tab.id}`}
+                    onClick={() => {
+                      playSound(clickAudio);
+                      setActiveTab(tab.id);
+                    }}
+                    className={`px-3.5 py-2.5 rounded-xl text-xs font-bold tracking-wide transition-all relative font-afarin1 flex items-center gap-2 ${
+                      isActive
+                        ? "text-white bg-white/5 border border-white/10"
+                        : "text-white/40 hover:text-white hover:bg-white/5"
+                    }`}
+                  >
+                    {typeof tab.icon === "string" ? (
+                      <Sparkles size={14} className={isActive ? "text-amber-400" : ""} />
+                    ) : (
+                      React.createElement(tab.icon as any, {
+                        size: 14,
+                        className: isActive ? "text-amber-400" : "",
+                      })
+                    )}
+                    <span>{tab.label}</span>
+                    {isActive && (
+                      <motion.div
+                        layoutId="activeWebIndicator"
+                        className="absolute bottom-1 left-2.5 right-2.5 h-[1.5px] bg-amber-400 rounded-full"
+                      />
+                    )}
+                  </button>
+                );
+              })}
+            </nav>
+
+            {/* Right Section: User Stats, Connection Status, and Actions */}
+            <div className="flex items-center gap-2 sm:gap-4">
+              {/* Dynamic Connection Light */}
+              <div
+                className={`hidden sm:flex p-1.5 rounded-lg border items-center gap-1.5 transition-colors duration-500 scale-90 sm:scale-100 ${
+                  isOnline
+                    ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
+                    : "bg-rose-500/10 border-rose-500/20 text-rose-400"
+                }`}
+              >
+                <div className={`w-1.5 h-1.5 rounded-full ${isOnline ? "bg-emerald-500" : "bg-rose-500 animate-pulse"}`} />
+                <span className="text-[8px] font-black uppercase tracking-widest hidden md:inline">
+                  {isOnline ? "Online" : "Offline"}
+                </span>
+              </div>
+
+              {/* Website Counters - Clean visual styling */}
+              <div className="flex items-center gap-1 sm:gap-2 bg-white/5 border border-white/10 px-3 py-1.5 rounded-xl">
+                <div className="flex items-center gap-1 text-orange-400" title={labels.streak}>
+                  <Flame size={14} fill="currentColor" />
+                  <span className="text-xs font-black">{streak}</span>
+                </div>
+                <div className="w-[1px] h-3 bg-white/10 mx-0.5" />
+                <div className="flex items-center gap-1 text-yellow-400" title={labels.xp}>
+                  <Star size={14} fill="currentColor" />
+                  <span className="text-xs font-black">{xp}</span>
+                </div>
+                <div className="w-[1px] h-3 bg-white/10 mx-0.5" />
+                <div className="flex items-center gap-1 text-emerald-400" title={labels.lesson}>
+                  <CheckCircle size={14} />
+                  <span className="text-xs font-black">{learnedLessons.size}</span>
+                </div>
+              </div>
+
+              {/* Responsive Hamburger Toggle Button for smaller screens */}
+              <button
                 onClick={() => {
                   playSound(clickAudio);
-                  setActiveTab(tab.id);
+                  setIsMobileMenuOpen(!isMobileMenuOpen);
                 }}
-                icon={
-                  typeof tab.icon === "string" ? (
-                    <Sparkles size={18} />
-                  ) : (
-                    React.createElement(tab.icon as any, { size: 18 })
-                  )
-                }
-                label={tab.label}
-              />
-            ))}
-          </nav>
-
-          {/* Improved Daily Goal Card */}
-          <div className="pt-6 border-t border-white/5">
-            <div className="bg-white/5 rounded-2xl p-5 border border-white/5">
-              <div className="flex justify-center items-center mb-2">
-                <p className="text-[10px] font-black text-white/40 tracking-[0.2em]">
-                  {lessonsToday} / {dailyGoal}
-                </p>
-              </div>
-              <div className="h-1 bg-white/5 rounded-full overflow-hidden">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{
-                    width: `${Math.min((lessonsToday / dailyGoal) * 100, 100)}%`,
-                  }}
-                  className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 shadow-[0_0_10px_rgba(99,102,241,0.4)]"
-                />
-              </div>
+                className="lg:hidden p-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-white/80 transition-all active:scale-95"
+                aria-label="Toggle Navigation Menu"
+              >
+                {isMobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
+              </button>
             </div>
           </div>
-        </aside>
-        <main className="lg:ms-56 min-h-screen pb-32 md:pb-16 relative z-10 transition-all">
-          {activeTab !== "translator" && (
-            <>
-              <header className="sticky top-0 z-40 theme-glass px-4 py-2 flex items-center justify-between gap-4">
-                <div className="flex items-center gap-2 shrink-0">
-                  <h1 className="text-xl font-bold text-white tracking-tight">
-                    {labels.title}
-                  </h1>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div
-                    className={`hidden sm:flex p-1.5 rounded-lg border items-center gap-1.5 transition-all duration-500 scale-90 sm:scale-100 ${isOnline ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" : "bg-rose-500/10 border-rose-500/20 text-rose-400"}`}
-                  >
-                    {isOnline ? (
-                      <Wifi size={12} className="animate-pulse" />
-                    ) : (
-                      <WifiOff size={12} />
-                    )}
-                    <span className="text-[8px] font-black uppercase tracking-widest">
-                      {isOnline ? "Online" : "Offline"}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1 text-orange-400">
-                    <Flame size={16} fill="currentColor" />
-                    <span className="text-xs font-black theme-text">
-                      {streak}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1 text-yellow-400">
-                    <Star size={16} fill="currentColor" />
-                    <span className="text-xs font-black theme-text">{xp}</span>
-                  </div>
-                </div>
-              </header>
 
-              <div className="hidden lg:flex justify-end gap-4 mb-8 px-4">
-                <HeaderIcon
-                  icon={
-                    <Flame
-                      className={`${streak > 0 ? "text-orange-400 fill-orange-400" : "theme-text opacity-20"}`}
+          {/* Sliding responsive Mobile Link Drawer */}
+          <AnimatePresence>
+            {isMobileMenuOpen && (
+              <motion.div
+                initial={{ opacity: 0, y: -15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                className="lg:hidden absolute top-18 left-4 right-4 z-40 bg-slate-900/95 backdrop-blur-3xl border border-white/10 rounded-2xl p-4 shadow-2xl space-y-4"
+              >
+                <div className="grid grid-cols-2 gap-2">
+                  {activeTabsList.map((tab) => {
+                    const isActive = activeTab === tab.id;
+                    return (
+                      <button
+                        key={`mob-link-${tab.id}`}
+                        onClick={() => {
+                          playSound(clickAudio);
+                          setActiveTab(tab.id);
+                          setIsMobileMenuOpen(false);
+                        }}
+                        className={`flex items-center gap-3 p-3 rounded-xl text-xs font-bold transition-all font-afarin1 ${
+                          isActive
+                            ? "theme-bg-primary text-white shadow-lg"
+                            : "text-white/60 hover:text-white bg-white/5 hover:bg-white/10"
+                        }`}
+                      >
+                        {typeof tab.icon === "string" ? (
+                          <Sparkles size={16} />
+                        ) : (
+                          React.createElement(tab.icon as any, { size: 16 })
+                        )}
+                        <span>{tab.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Progress Widget Embedded in Mobile Nav */}
+                <div className="p-3 bg-white/5 rounded-xl border border-white/5">
+                  <div className="flex justify-between items-center mb-1.5">
+                    <p className="text-[9px] font-bold text-white/40 uppercase tracking-widest font-afarin1">
+                      {interfaceLang === "Sorani" ? "وانەکانی ئەمڕۆ" : "Dersên Îro"}
+                    </p>
+                    <p className="text-[10px] font-black text-amber-400">
+                      {lessonsToday} / {dailyGoal}
+                    </p>
+                  </div>
+                  <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-amber-400"
+                      style={{ width: `${Math.min((lessonsToday / dailyGoal) * 100, 100)}%` }}
                     />
-                  }
-                  val={streak}
-                  label={labels.streak}
-                />
-                <HeaderIcon
-                  icon={<Star className="text-yellow-400 fill-yellow-400" />}
-                  val={xp}
-                  label={labels.xp}
-                />
-                <HeaderIcon
-                  icon={<CheckCircle className="theme-primary fill-current" />}
-                  val={learnedLessons.size}
-                  label={labels.lesson}
-                />
-              </div>
-            </>
-          )}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </header>
 
-          <div className="max-w-2xl mx-auto px-4 md:px-6 py-4 md:py-8">
+        {/* Outer Layout Wrapper without Sidebar Margin or constrained Bottom Bar */}
+        <main className="min-h-screen pt-4 pb-16 relative z-10 w-full animate-fadeIn">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-8">
             <AnimatePresence mode="wait">
               {activeTab === "home" ? (
                 <motion.div
                   key="home"
-                  initial={{ opacity: 0, y: 20 }}
+                  initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ type: "spring", damping: 25, stiffness: 120 }}
+                  exit={{ opacity: 0, y: -12 }}
+                  transition={{ duration: 0.18, ease: "easeOut" }}
                   className="space-y-4 md:space-y-4"
                 >
                   {/* Compact Combined Hero & Progress Section */}
@@ -5232,10 +5298,10 @@ export default function App() {
               ) : activeTab === "grammar" ? (
                 <motion.div
                   key="grammar"
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 1.05 }}
-                  transition={{ type: "spring", damping: 25, stiffness: 120 }}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -12 }}
+                  transition={{ duration: 0.18, ease: "easeOut" }}
                   className="space-y-4"
                 >
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
@@ -6182,10 +6248,10 @@ export default function App() {
               ) : activeTab === "profile" ? (
                 <motion.div
                   key="profile"
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{ type: "spring", damping: 25, stiffness: 120 }}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -12 }}
+                  transition={{ duration: 0.18, ease: "easeOut" }}
                   className="space-y-10"
                 >
                   <div className="overflow-hidden theme-bg-card backdrop-blur-xl border theme-border-soft rounded-[1.25rem] md:rounded-[1.25rem] shadow-2xl relative">
@@ -6611,9 +6677,10 @@ export default function App() {
               ) : activeTab === "admin" ? (
                 <motion.div
                   key="admin"
-                  initial={{ opacity: 0, y: 20 }}
+                  initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
+                  exit={{ opacity: 0, y: -12 }}
+                  transition={{ duration: 0.18, ease: "easeOut" }}
                   className="space-y-4"
                 >
                   <div className="flex flex-col gap-2 mb-4">
@@ -7559,9 +7626,10 @@ export default function App() {
               ) : activeTab === "flashcards" ? (
                 <motion.div
                   key="flashcards"
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 1.05 }}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -12 }}
+                  transition={{ duration: 0.18, ease: "easeOut" }}
                   className="min-h-[600px] flex flex-col items-center py-8"
                 >
                   <div className="flex items-center gap-4 mb-6 w-full max-w-xl">
@@ -7749,9 +7817,10 @@ export default function App() {
               ) : activeTab === "leaderboard" ? (
                 <motion.div
                   key="leaderboard"
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -12 }}
+                  transition={{ duration: 0.18, ease: "easeOut" }}
                   className="space-y-4 pb-24"
                 >
                   <div className="flex items-center gap-4 mb-6">
@@ -7946,6 +8015,80 @@ export default function App() {
               ) : null}
             </AnimatePresence>
           </div>
+
+          {/* Top-tier professional website footer */}
+          <footer className="mt-20 border-t border-white/5 pt-12 pb-8 px-4 md:px-8 max-w-6xl mx-auto text-white/40">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 theme-bg-primary rounded-lg flex items-center justify-center p-1">
+                    <img src={KHANI_LOGO} alt="Logo" className="w-[120%] h-[120%] object-contain" />
+                  </div>
+                  <span className="text-sm font-black text-white font-afarin1 tracking-wider uppercase">
+                    {interfaceLang === "Sorani" ? "فێرگەی خانی" : "Fêrga Xanî"}
+                  </span>
+                </div>
+                <p className="text-xs text-white/40 leading-relaxed font-afarin1">
+                  {interfaceLang === "Sorani" 
+                    ? "سەکۆیەکی فێرکاری مۆدێرن بۆ پەرەپێدان و پاراستنی زمان و شێوەزارە شیرینەکانی کوردی."
+                    : "Platformeke perwerdehiyê ya nûjen ji bo hînbûn û parastina ziman û zaravên şîrîn ên kurdî."}
+                </p>
+              </div>
+
+              <div>
+                <h4 className="text-xs font-black text-white uppercase tracking-widest mb-4">
+                  {interfaceLang === "Sorani" ? "بەشەکان" : "Beş"}
+                </h4>
+                <ul className="space-y-2 text-xs">
+                  <li><a href="#home" onClick={() => { playSound(clickAudio); setActiveTab("home"); }} className="hover:text-amber-400 font-afarin1 transition-colors">{labels.home}</a></li>
+                  <li><a href="#grammar" onClick={() => { playSound(clickAudio); setActiveTab("grammar"); }} className="hover:text-amber-400 font-afarin1 transition-colors">{labels.grammar}</a></li>
+                  <li><a href="#dictionary" onClick={() => { playSound(clickAudio); setActiveTab("dictionary"); }} className="hover:text-amber-400 font-afarin1 transition-colors">{interfaceLang === "Sorani" ? "فەرهەنگ" : "Ferheng"}</a></li>
+                  <li><a href="#flashcards" onClick={() => { playSound(clickAudio); setActiveTab("flashcards"); }} className="hover:text-amber-400 font-afarin1 transition-colors">{labels.flashcards}</a></li>
+                </ul>
+              </div>
+
+              <div>
+                <h4 className="text-xs font-black text-white uppercase tracking-widest mb-4">
+                  {interfaceLang === "Sorani" ? "ئامرازەکان" : "Amûr"}
+                </h4>
+                <ul className="space-y-2 text-xs">
+                  <li><a href="#translator" onClick={() => { playSound(clickAudio); setActiveTab("translator"); }} className="hover:text-amber-400 font-afarin1 transition-colors">{labels.translator}</a></li>
+                  <li><a href="#leaderboard" onClick={() => { playSound(clickAudio); setActiveTab("leaderboard"); }} className="hover:text-amber-400 font-afarin1 transition-colors">{labels.leaderboard}</a></li>
+                  <li><a href="#profile" onClick={() => { playSound(clickAudio); setActiveTab("profile"); }} className="hover:text-amber-400 font-afarin1 transition-colors">{labels.profile}</a></li>
+                </ul>
+              </div>
+
+              <div>
+                <h4 className="text-xs font-black text-white uppercase tracking-widest mb-4">
+                  {interfaceLang === "Sorani" ? "ئەکادیمیا" : "Akademî"}
+                </h4>
+                <div className="p-4 bg-white/5 rounded-2xl border border-white/5 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Sparkles size={14} className="text-amber-400" />
+                    <span className="text-[10px] font-black text-white tracking-wider">{interfaceLang === "Sorani" ? "پێشکەوتنی جیهانی" : "Pêşveçûna Global"}</span>
+                  </div>
+                  <div className="flex justify-between text-[10px]">
+                    <span>{interfaceLang === "Sorani" ? "کۆی وانەکان" : "Tevahiya Dersan"}:</span>
+                    <span className="font-bold text-white">{learnedLessons.size}</span>
+                  </div>
+                  <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+                    <div className="h-full bg-amber-400" style={{ width: `${Math.min((learnedLessons.size / 20) * 100, 100)}%` }} />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4 text-xs">
+              <p className="font-mono text-[10px]">
+                Meydan Kurdish Language Academy © 2026. Custom Domain Verified.
+              </p>
+              <div className="flex gap-6">
+                <span className="hover:text-white transition-colors cursor-pointer">Terms</span>
+                <span className="hover:text-white transition-colors cursor-pointer">Privacy</span>
+                <span className="hover:text-white transition-colors cursor-pointer">Kurdish Heritage</span>
+              </div>
+            </div>
+          </footer>
         </main>
 
         {/* User Detail Modal */}
@@ -8053,129 +8196,7 @@ export default function App() {
           )}
         </AnimatePresence>
 
-        {/* Refined Fixed Bottom Nav for Mobile */}
-        <nav className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 w-[85%] max-w-xs h-12 theme-bg-soft backdrop-blur-2xl border theme-border-soft rounded-xl flex items-center justify-around px-2 z-50 shadow-xl">
-          {activeTabsList.map((tab) => (
-            <MobileNavBtn
-              key={tab.id + '-' + tab.label}
-              active={activeTab === tab.id}
-              label={tab.label}
-              onClick={() => {
-                playSound(clickAudio);
-                setActiveTab(tab.id);
-              }}
-              icon={
-                typeof tab.icon === "string" ? (
-                  <Sparkles size={18} />
-                ) : (
-                  React.createElement(tab.icon as any, { size: 18 })
-                )
-              }
-            />
-          ))}
-        </nav>
 
-        {/* Stats Overlay (Desktop Floating Glass Card) */}
-        <div className="hidden xl:block fixed top-16 right-16 w-80 space-y-4 z-50">
-          <motion.div
-            initial={{ x: 50, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            className="p-4 theme-glass rounded-[1.25rem] shadow-2xl relative overflow-hidden"
-          >
-            {/* Cultural Decorative Sun in Background */}
-            <div className="absolute -top-4 -right-10 w-40 h-40 opacity-5 pointer-events-none">
-              <div className="w-full h-full bg-yellow-400 rounded-full shadow-[0_0_100px_rgba(245,231,0,0.5)] flex items-center justify-center">
-                {[...Array(21)].map((_, i) => (
-                  <div
-                    key={`key-prefix-6-${i}`}
-                    className="absolute top-1/2 left-1/2 w-full h-[2px] bg-yellow-400 origin-left"
-                    style={{
-                      transform: `translate(-50%, -50%) rotate(${i * (360 / 21)}deg) translateX(50%)`,
-                    }}
-                  />
-                ))}
-              </div>
-            </div>
-
-            <div className="flex items-center gap-5 mb-8 relative z-10">
-              <div className="w-14 h-14 rounded-full border-2 theme-border-primary p-1 overflow-hidden shadow-2xl relative">
-                {user?.photoURL ? (
-                  <img
-                    src={user.photoURL}
-                    alt="Profile"
-                    className="w-full h-full object-cover rounded-full"
-                    referrerPolicy="no-referrer"
-                  />
-                ) : (
-                  <div className="w-full h-full theme-bg-primary flex items-center justify-center text-white text-xl font-black rounded-full">
-                    {user?.displayName?.[0] ||
-                      user?.email?.[0]?.toUpperCase() || <UserIcon size={24} />}
-                  </div>
-                )}
-              </div>
-              <div className="flex flex-col">
-                <p className="text-[10px] font-black uppercase theme-primary tracking-widest">
-                  {user?.displayName || "خانی"}
-                </p>
-                <p className="text-2xl font-black theme-text tracking-tighter leading-none">
-                  {interfaceLang === "Sorani" ? "پێشکەوتن" : "Pêşketin"}
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <div className="w-full theme-bg-soft h-4 rounded-full overflow-hidden border theme-border-soft p-1">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{
-                    width: `${(learnedLessons.size / units.flatMap((u) => u.lessons).length) * 100}%`,
-                  }}
-                  className="h-full theme-bg-primary rounded-full theme-shadow-primary shadow-lg"
-                />
-              </div>
-              <div className="flex justify-between items-center px-1">
-                <p className="text-[10px] font-black theme-text opacity-40 uppercase">
-                  کۆتایی وانەکان
-                </p>
-                <p className="text-xs font-black theme-text opacity-80">
-                  {learnedLessons.size} /{" "}
-                  {units.flatMap((u) => u.lessons).length}
-                </p>
-              </div>
-
-              <div className="pt-6 border-t border-white/5">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center">
-                      <Flame
-                        size={20}
-                        className="text-orange-500"
-                        fill="currentColor"
-                      />
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-black text-orange-400 uppercase tracking-widest">
-                        {labels.streak}
-                      </p>
-                      <p className="text-xl font-black theme-text">{streak}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl theme-bg-primary/20 flex items-center justify-center">
-                      <Trophy size={20} className="theme-primary" />
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-black theme-primary uppercase tracking-widest">
-                        {labels.xp}
-                      </p>
-                      <p className="text-xl font-black theme-text">{xp}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        </div>
 
         <style>{`
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
