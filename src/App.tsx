@@ -2639,26 +2639,17 @@ const formatVideoEmbed = (url: string) => {
   if (!url) return "";
 
   // YouTube handle
-  if (url.includes("youtube.com/") || url.includes("youtu.be/")) {
-    let videoId = "";
-    if (url.includes("v=")) {
-      videoId = url.split("v=")[1]?.split("&")[0];
-    } else if (url.includes("youtu.be/")) {
-      videoId = url.split("youtu.be/")[1]?.split("?")[0];
-    } else if (url.includes("embed/")) {
-      videoId = url.split("embed/")[1]?.split("?")[0];
-    }
-
-    if (videoId) {
-      return `<div class="aspect-video w-full rounded-2xl overflow-hidden border border-white/10 shadow-2xl bg-black/40"><iframe src="https://www.youtube.com/embed/${videoId}" class="w-full h-full" frameborder="0" allowfullscreen></iframe></div>`;
-    }
+  const ytMatch = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([\w-]{11})/);
+  if (ytMatch && ytMatch[1]) {
+    const videoId = ytMatch[1];
+    return `<div class="aspect-video w-full rounded-2xl overflow-hidden border border-white/10 shadow-2xl bg-black/40"><iframe src="https://www.youtube.com/embed/${videoId}" class="w-full h-full" frameborder="0" allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe></div>`;
   }
 
   // Vimeo handle
   if (url.includes("vimeo.com/")) {
     const videoId = url.split("vimeo.com/")[1]?.split("?")[0];
     if (videoId) {
-      return `<div class="aspect-video w-full rounded-2xl overflow-hidden border border-white/10 shadow-2xl bg-black/40"><iframe src="https://player.vimeo.com/video/${videoId}" class="w-full h-full" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe></div>`;
+      return `<div class="aspect-video w-full rounded-2xl overflow-hidden border border-white/10 shadow-2xl bg-black/40"><iframe src="https://player.vimeo.com/video/${videoId}" class="w-full h-full" frameborder="0" allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe></div>`;
     }
   }
 
@@ -3272,6 +3263,62 @@ export default function App() {
     );
     return all;
   }, [appConfig?.dialectSchoolContent]);
+
+  const schoolGroupedCategories = useMemo(() => {
+    const filteredAll = schoolSearchQuery
+      ? allSchoolTopics.filter(
+          (t) =>
+            (t.title || "").toLowerCase().includes(schoolSearchQuery.toLowerCase()) ||
+            (t.content || "").toLowerCase().includes(schoolSearchQuery.toLowerCase()) ||
+            (t.book || "").toLowerCase().includes(schoolSearchQuery.toLowerCase()) ||
+            (t.author || "").toLowerCase().includes(schoolSearchQuery.toLowerCase()),
+        )
+      : allSchoolTopics;
+
+    const items = Array.from(
+      new Set(
+        filteredAll
+          .map((t) => {
+            if (schoolGrouping === "book") return t.book;
+            if (schoolGrouping === "author") return t.author;
+            if (schoolGrouping === "format") return t.format;
+            return t.category;
+          })
+          .filter((v) => typeof v === "string" && v.trim() !== ""),
+      ),
+    ).sort();
+
+    const categorized = items.map((item: any) => {
+      const count = filteredAll.filter((t) => {
+        if (schoolGrouping === "book") return t.book === item;
+        if (schoolGrouping === "author") return t.author === item;
+        if (schoolGrouping === "format") return t.format === item;
+        return t.category === item;
+      }).length;
+      return { item, count };
+    });
+
+    return { filteredAll, categorized };
+  }, [allSchoolTopics, schoolGrouping, schoolSearchQuery]);
+
+  const schoolFilteredTopics = useMemo(() => {
+    if (!selectedSchoolCategory) return [];
+    const matchesGroup = allSchoolTopics.filter((t) => {
+      if (schoolGrouping === "book") return t.book === selectedSchoolCategory;
+      if (schoolGrouping === "author") return t.author === selectedSchoolCategory;
+      if (schoolGrouping === "format") return t.format === selectedSchoolCategory;
+      return t.category === selectedSchoolCategory;
+    });
+
+    if (!schoolSearchQuery) return matchesGroup;
+
+    const query = schoolSearchQuery.toLowerCase();
+    return matchesGroup.filter(
+      (topic) =>
+        (topic.title || "").toLowerCase().includes(query) ||
+        (topic.content || "").toLowerCase().includes(query),
+    );
+  }, [allSchoolTopics, schoolGrouping, selectedSchoolCategory, schoolSearchQuery]);
   const [schoolTopicReadStatus, setSchoolTopicReadStatus] = useState<
     Set<string>
   >(() => {
@@ -3562,7 +3609,7 @@ export default function App() {
     const q = query(
       collection(db, "users"),
       orderBy("xp", "desc"),
-      limit(1000),
+      limit(100),
     );
 
     const unsub = onSnapshot(
@@ -3760,9 +3807,9 @@ export default function App() {
           (w.id && w.id === customWord.id) || w.sorani === customWord.sorani,
       );
       if (idx >= 0) {
-        merged[idx] = { ...merged[idx], ...customWord };
+        merged[idx] = { ...merged[idx], ...customWord, isCustom: true };
       } else {
-        merged.push(customWord);
+        merged.push({ ...customWord, isCustom: true });
       }
     });
     return merged;
@@ -4401,7 +4448,7 @@ export default function App() {
                       <div className="grid grid-cols-1 gap-4">
                         {currentEx.options?.map((opt, i) => (
                           <motion.button
-                            key={i}
+                            key={`key-prefix-1-${i}`}
                             whileHover={{ scale: 1.01 }}
                             whileTap={{ scale: 0.99 }}
                             onClick={() => !feedback && setSelectedOption(opt)}
@@ -4424,8 +4471,8 @@ export default function App() {
                         <div className="min-h-[100px] p-5 theme-bg-card border theme-border-soft border-dashed rounded-2xl flex flex-wrap gap-2 items-start">
                           {usedOptionIndices.map((idx, i) => (
                             <motion.button
-                              layoutId={`word-${idx}`}
                               key={`used-${idx}-${i}`}
+                              whileTap={{ scale: 0.95 }}
                               onClick={() => toggleWord(idx)}
                               className="px-4 py-2 theme-bg-primary rounded-lg font-bold shadow-md"
                             >
@@ -4436,8 +4483,8 @@ export default function App() {
                         <div className="flex flex-wrap gap-2 justify-center">
                           {currentEx.options?.map((opt, i) => (
                             <motion.button
-                              layoutId={`word-${i}`}
                               key={`opt-${i}`}
+                              whileTap={{ scale: 0.95 }}
                               disabled={
                                 usedOptionIndices.includes(i) || !!feedback
                               }
@@ -4509,7 +4556,7 @@ export default function App() {
                   <div className="absolute inset-0 z-0 pointer-events-none">
                     {[...Array(20)].map((_, i) => (
                       <motion.div
-                        key={i}
+                        key={`key-prefix-2-${i}`}
                         initial={{
                           y: -20,
                           x: Math.random() * 600 - 300,
@@ -4687,7 +4734,7 @@ export default function App() {
           <nav className="space-y-1.5 mb-auto">
             {activeTabsList.map((tab) => (
               <NavBtn
-                key={tab.id}
+                key={tab.id + '-' + tab.label}
                 active={activeTab === tab.id}
                 onClick={() => {
                   playSound(clickAudio);
@@ -5073,7 +5120,7 @@ export default function App() {
 
                                       return (
                                         <div
-                                          key={lesson.id}
+                                          key={lesson.id + '-' + (lesson.title || '')}
                                           className="relative"
                                         >
                                           <motion.div
@@ -5211,9 +5258,6 @@ export default function App() {
                     <div className="flex items-center gap-2 bg-white/5 p-1.5 rounded-2xl border border-white/10 overflow-x-auto no-scrollbar">
                       {[
                         {
-                          id: "category", icon: Library, label: interfaceLang === "Sorani" ? "پۆلێنەکان" : "Kategorî",
-                        },
-                        {
                           id: "book",
                           icon: Book,
                           label: interfaceLang === "Sorani" ? "کتێب" : "Pirtûk",
@@ -5223,6 +5267,16 @@ export default function App() {
                           icon: UserIcon,
                           label:
                             interfaceLang === "Sorani" ? "نووسەر" : "Nivîskar",
+                        },
+                        {
+                          id: "format",
+                          icon: Layers,
+                          label: interfaceLang === "Sorani" ? "جۆری بابەت" : "Cureyê Babetê",
+                        },
+                        {
+                          id: "category", 
+                          icon: Globe, 
+                          label: interfaceLang === "Sorani" ? "زمان / شێوەزار" : "Ziman / Şêwezar",
                         },
                       ].map((group) => (
                         <button
@@ -5262,75 +5316,10 @@ export default function App() {
                   {!selectedSchoolCategory &&
                   !selectedSchoolTopic ? (
                     <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 md:gap-4">
-                      {(() => {
-                            const uncategorizedLabel =
-                              interfaceLang === "Sorani"
-                                ? "دەستنیشان نەکراو"
-                                : "Bêkategorî";
-
-                            const filteredAll = schoolSearchQuery
-                              ? allSchoolTopics.filter(
-                                  (t) =>
-                                    t.title
-                                      .toLowerCase()
-                                      .includes(
-                                        schoolSearchQuery.toLowerCase(),
-                                      ) ||
-                                    (t.content || "")
-                                      .toLowerCase()
-                                      .includes(
-                                        schoolSearchQuery.toLowerCase(),
-                                      ) ||
-                                    (t.book || "")
-                                      .toLowerCase()
-                                      .includes(
-                                        schoolSearchQuery.toLowerCase(),
-                                      ) ||
-                                    (t.author || "")
-                                      .toLowerCase()
-                                      .includes(
-                                        schoolSearchQuery.toLowerCase(),
-                                      ),
-                                )
-                              : allSchoolTopics;
-
-                            const items =
-                              schoolGrouping === "book"
-                                ? Array.from(
-                                    new Set(
-                                      filteredAll.map(
-                                        (t) => t.book || uncategorizedLabel,
-                                      ),
-                                    ),
-                                  )
-                                : schoolGrouping === "author"
-                                ? Array.from(
-                                    new Set(
-                                      filteredAll.map(
-                                        (t) => t.author || uncategorizedLabel,
-                                      ),
-                                    ),
-                                  )
-                                : Array.from(
-                                    new Set(
-                                      filteredAll.map(
-                                        (t) => t.category || t.dialect || (interfaceLang === "Sorani" ? "گشتی" : "Giştî"),
-                                      ),
-                                    ),
-                                  );
-
-                            return items.map((item: any, i) => {
-                              const count = filteredAll.filter(
-                                (t) =>
-                                  (schoolGrouping === "book"
-                                    ? t.book || uncategorizedLabel
-                                    : schoolGrouping === "author"
-                                    ? t.author || uncategorizedLabel
-                                    : t.category || t.dialect || (interfaceLang === "Sorani" ? "گشتی" : "Giştî")) === item,
-                              ).length;
+                      {schoolGroupedCategories.categorized.map(({ item, count }, i) => {
                               return (
                                 <motion.button
-                                  key={item}
+                                  key={`group-item-${item}`}
                                   initial={{ opacity: 0, y: 20 }}
                                   animate={{ opacity: 1, y: 0 }}
                                   transition={{ delay: i * 0.05 }}
@@ -5352,6 +5341,11 @@ export default function App() {
                                         />
                                       ) : schoolGrouping === "author" ? (
                                         <UserIcon
+                                          size={24}
+                                          className="text-white/40 group-hover:text-white"
+                                        />
+                                      ) : schoolGrouping === "format" ? (
+                                        <Layers
                                           size={24}
                                           className="text-white/40 group-hover:text-white"
                                         />
@@ -5384,8 +5378,7 @@ export default function App() {
                                   </div>
                                 </motion.button>
                               );
-                            });
-                          })()}
+                            })}
 
                       {isAdminUser && schoolGrouping === "category" && (
                         <motion.button
@@ -5400,7 +5393,6 @@ export default function App() {
                             if (newKey && newKey.trim()) {
                               const sanitizedKey = newKey.trim();
                               try {
-                                const docRef = doc(db, "app", "global");
                                 await setDoc(
                                   doc(
                                     db,
@@ -5413,9 +5405,7 @@ export default function App() {
                                   { merge: true },
                                 );
                                 playSound(clickAudio);
-                                // Local state will update via onSnapshot
                               } catch (err) {
-                                // If update fails because document/field doesn't exist, fallback to saveGlobalConfig
                                 const current =
                                   appConfig?.dialectSchoolContent || {};
                                 saveGlobalConfig({
@@ -5599,45 +5589,9 @@ export default function App() {
                             </div>
 
                             <div className="grid grid-cols-1 gap-4">
-                              {(schoolGrouping === "category"
-                                ? allSchoolTopics.filter(
-                                    (t) =>
-                                      (t.category || t.dialect ||
-                                        (interfaceLang === "Sorani"
-                                          ? "گشتی"
-                                          : "Giştî")) ===
-                                      selectedSchoolCategory,
-                                  )
-                                : allSchoolTopics.filter((t) => {
-                                    const uncategorizedLabel =
-                                      interfaceLang === "Sorani"
-                                        ? "دەستنیشان نەکراو"
-                                        : "Bêkategorî";
-                                    return (
-                                      (schoolGrouping === "book"
-                                        ? t.book || uncategorizedLabel
-                                        : t.author || uncategorizedLabel) ===
-                                      selectedSchoolCategory
-                                    );
-                                  })
-                              )
-                                .filter(
-                                  (topic) =>
-                                    !schoolSearchQuery ||
-                                    topic.title
-                                      .toLowerCase()
-                                      .includes(
-                                        schoolSearchQuery.toLowerCase(),
-                                      ) ||
-                                    topic.content
-                                      .toLowerCase()
-                                      .includes(
-                                        schoolSearchQuery.toLowerCase(),
-                                      ),
-                                )
-                                .map((topic, i) => (
+                              {schoolFilteredTopics.map((topic, i) => (
                                   <motion.button
-                                    key={i}
+                                    key={`key-prefix-3-${i}`}
                                     initial={{ opacity: 0, y: 10 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ delay: i * 0.05 }}
@@ -6144,23 +6098,11 @@ export default function App() {
                             {/* Topic Navigation */}
                             <div className="flex items-center justify-between gap-4">
                               {(() => {
-                                const dialectTopics =
-                                  schoolGrouping === "category"
-                                    ? allSchoolTopics.filter(
-                                        (t: any) =>
-                                          (t.category || t.dialect ||
-                                            (interfaceLang === "Sorani"
-                                              ? "گشتی"
-                                              : "Giştî")) ===
-                                          selectedSchoolCategory,
-                                      )
-                                    : allSchoolTopics.filter(
-                                        (t: any) =>
-                                          (schoolGrouping === "book"
-                                            ? t.book || (interfaceLang === "Sorani" ? "دەستنیشان نەکراو" : "Bêkategorî")
-                                            : t.author || (interfaceLang === "Sorani" ? "دەستنیشان نەکراو" : "Bêkategorî")) ===
-                                          selectedSchoolCategory,
-                                      );
+                                const dialectTopics = allSchoolTopics.filter((t: any) => {
+                                  if (schoolGrouping === "book") return t.book === selectedSchoolCategory;
+                                  if (schoolGrouping === "author") return t.author === selectedSchoolCategory;
+                                  return (t.category) === selectedSchoolCategory;
+                                });
                                 const currentIndex = dialectTopics.findIndex(
                                   (t: any) =>
                                     t.title === selectedSchoolTopic.title,
@@ -6470,7 +6412,7 @@ export default function App() {
                         {(["Sorani", "Kurmanji"] as InterfaceLang[]).map(
                           (i) => (
                             <motion.button
-                              key={i}
+                              key={`key-prefix-4-${i}`}
                               whileHover={{ scale: 1.05 }}
                               whileTap={{ scale: 0.95 }}
                               onClick={() => handleInterfaceChange(i)}
@@ -6726,7 +6668,7 @@ export default function App() {
                       },
                     ].map((tab) => (
                       <button
-                        key={tab.id}
+                        key={tab.id + '-' + tab.label}
                         onClick={() => {
                           playSound(clickAudio);
                           setAdminSubTab(tab.id as any);
@@ -6906,7 +6848,7 @@ export default function App() {
                           {(appConfig?.extraTabs || []).map(
                             (t: any, idx: number) => (
                               <div
-                                key={t.id}
+                                key={t.id + '-' + idx}
                                 className="bg-white/5 rounded-3xl border theme-border-soft p-4"
                               >
                                 <div className="flex items-center justify-between mb-4">
@@ -7024,836 +6966,239 @@ export default function App() {
                     )}
 
                     {adminSubTab === "school" && (
-                      <motion.div
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        className="space-y-4"
-                      >
-                        <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-                          {Object.keys(
-                            appConfig?.dialectSchoolContent || {},
-                          ).map((langKey) => (
-                            <button
-                              key={langKey}
-                              onClick={() => {
-                                playSound(clickAudio);
-                                setActiveAdminDialect(langKey);
-                              }}
-                              className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${activeAdminDialect === langKey ? "theme-bg-primary text-white border-white/20" : "bg-white/5 theme-text-muted border-white/5"}`}
-                            >
-                              {langKey}
-                            </button>
-                          ))}
-                          <button
-                            onClick={() => {
-                              playSound(clickAudio);
-                              setShowSectionAdder(true);
-                            }}
-                            className="px-4 py-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-xl text-[10px] font-black uppercase tracking-widest shrink-0"
-                          >
-                            + {interfaceLang === "Sorani" ? "بەش" : "Beş"}
-                          </button>
-                          {showSectionAdder && (
-                            <div className="flex items-center gap-2 bg-white/5 p-1 rounded-xl border border-white/10 shrink-0">
-                              <input
-                                autoFocus
-                                value={newSectionName}
-                                onChange={(e) =>
-                                  setNewSectionName(e.target.value)
-                                }
-                                onKeyDown={async (e) => {
-                                  if (e.key === "Enter") {
-                                    const name = newSectionName.trim();
-                                    if (!name) return;
-                                    try {
-                                      const current =
-                                        (appConfig?.dialectSchoolContent ||
-                                          {}) as Record<string, any[]>;
-                                      if (current[name]) {
-                                        alert(
-                                          interfaceLang === "Sorani"
-                                            ? "ئەم بەشە پێشتر هەیە!"
-                                            : "Ev beş jixwe heye!",
-                                        );
-                                        setActiveAdminDialect(name);
-                                        setShowSectionAdder(false);
-                                        return;
-                                      }
-                                      await saveGlobalConfig({
-                                        dialectSchoolContent: {
-                                          ...current,
-                                          [name]: [],
-                                        },
-                                      });
-                                      setActiveAdminDialect(name);
-                                      setNewSectionName("");
-                                      setShowSectionAdder(false);
-                                      playSound(clickAudio);
-                                    } catch (err) {
-                                      console.error("Add section error:", err);
-                                      alert(
-                                        "Error: " +
-                                          (err instanceof Error
-                                            ? err.message
-                                            : String(err)),
-                                      );
-                                    }
-                                  } else if (e.key === "Escape") {
-                                    setShowSectionAdder(false);
-                                    setNewSectionName("");
-                                  }
-                                }}
-                                placeholder={
-                                  interfaceLang === "Sorani"
-                                    ? "ناوی بەش..."
-                                    : "Navê beş..."
-                                }
-                                className="bg-transparent text-white text-[10px] font-black focus:outline-none px-2 w-24 font-afarin1"
-                              />
-                              <button
-                                onClick={() => {
-                                  setShowSectionAdder(false);
-                                  setNewSectionName("");
-                                }}
-                                className="p-1 text-white/40 hover:text-white"
-                              >
-                                <X size={12} />
-                              </button>
-                            </div>
-                          )}
-                        </div>
+  <motion.div
+    initial={{ opacity: 0, x: -10 }}
+    animate={{ opacity: 1, x: 0 }}
+    className="space-y-4"
+  >
+    <div className="flex items-center justify-between pb-4 border-b theme-border-soft mb-4">
+      <h3 className="font-black text-white uppercase tracking-widest text-lg font-afarin1">
+         {interfaceLang === "Sorani" ? "بەڕێوەبردنی وانەکان" : "Rêveberiya Dersan"}
+      </h3>
+    </div>
 
-                        {activeAdminDialect && (
-                          <div className="space-y-4">
-                            <div className="flex items-center justify-between pb-4 border-b theme-border-soft">
-                              <div className="flex items-center gap-4">
-                                <h3 className="font-black text-white uppercase tracking-widest text-lg font-afarin1">
-                                  {activeAdminDialect} -{" "}
-                                  {interfaceLang === "Sorani"
-                                    ? "ناوەرۆکی بەش"
-                                    : "Naveroka Beşê"}
-                                </h3>
-                                <button
-                                  onClick={async () => {
-                                    const newName = prompt(
-                                      interfaceLang === "Sorani"
-                                        ? "ناوی نوێی بەش بنووسە:"
-                                        : "Navê nû yê beşê binivîse:",
-                                      activeAdminDialect,
-                                    );
-                                    if (
-                                      newName &&
-                                      newName.trim() &&
-                                      newName !== activeAdminDialect
-                                    ) {
-                                      const trimmed = newName.trim();
-                                      const current =
-                                        (appConfig?.dialectSchoolContent ||
-                                          {}) as Record<string, any[]>;
-                                      if (current[trimmed]) {
-                                        alert(
-                                          interfaceLang === "Sorani"
-                                            ? "ئەم ناوە پێشتر هەیە!"
-                                            : "Ev nav jixwe heye!",
-                                        );
-                                        return;
-                                      }
-                                      try {
-                                        if (!activeAdminDialect) return;
-                                        const oldRef = doc(
-                                          db,
-                                          "app",
-                                          "global",
-                                          "dialects",
-                                          activeAdminDialect,
-                                        );
-                                        const newRef = doc(
-                                          db,
-                                          "app",
-                                          "global",
-                                          "dialects",
-                                          trimmed,
-                                        );
-                                        await setDoc(
-                                          newRef,
-                                          {
-                                            topics: cleanObject(
-                                              current[activeAdminDialect],
-                                            ),
-                                          },
-                                          { merge: true },
-                                        );
-                                        await deleteDoc(oldRef);
-                                        await deleteDoc(
-                                          doc(
-                                            db,
-                                            "app",
-                                            "global",
-                                            "dialects",
-                                            activeAdminDialect,
-                                          ),
-                                        );
-                                        await updateDoc(
-                                          doc(db, "app", "global"),
-                                          new FieldPath(
-                                            "dialectSchoolContent",
-                                            activeAdminDialect,
-                                          ),
-                                          deleteField(),
-                                        );
-                                        setActiveAdminDialect(trimmed);
-                                        playSound(clickAudio);
-                                      } catch (err) {
-                                        console.error("Rename error:", err);
-                                      }
-                                    }
-                                  }}
-                                  className="p-2 bg-white/5 rounded-lg text-white/40 hover:text-white"
-                                  title={
-                                    interfaceLang === "Sorani"
-                                      ? "گۆڕینی ناو"
-                                      : "Navê biguherîne"
-                                  }
-                                >
-                                  <Edit3 size={14} />
-                                </button>
-                                <button
-                                  onClick={async () => {
-                                    if (!activeAdminDialect) return;
-                                    if (
-                                      confirm(
-                                        interfaceLang === "Sorani"
-                                          ? `ئایە دڵنیای لە سڕینەوەی بەشی "${activeAdminDialect}"؟`
-                                          : `Ma tu bawer î ku tu dizanî beşa "${activeAdminDialect}" jê bibî?`,
-                                      )
-                                    ) {
-                                      try {
-                                        await deleteDoc(
-                                          doc(
-                                            db,
-                                            "app",
-                                            "global",
-                                            "dialects",
-                                            activeAdminDialect,
-                                          ),
-                                        );
-                                        await deleteDoc(
-                                          doc(
-                                            db,
-                                            "app",
-                                            "global",
-                                            "dialects",
-                                            activeAdminDialect,
-                                          ),
-                                        );
-                                        await updateDoc(
-                                          doc(db, "app", "global"),
-                                          new FieldPath(
-                                            "dialectSchoolContent",
-                                            activeAdminDialect,
-                                          ),
-                                          deleteField(),
-                                        );
-                                        setActiveAdminDialect(null);
-                                        playSound(clickAudio);
-                                      } catch (err) {
-                                        console.error(
-                                          "Delete section error:",
-                                          err,
-                                        );
-                                      }
-                                    }
-                                  }}
-                                  className="p-2 bg-rose-500/10 rounded-lg text-rose-500 hover:bg-rose-500 hover:text-white transition-all"
-                                  title={
-                                    interfaceLang === "Sorani"
-                                      ? "سڕینەوەی بەش"
-                                      : "Beşê jê bibe"
-                                  }
-                                >
-                                  <Trash2 size={14} />
-                                </button>
-                              </div>
-                              <button
-                                onClick={async () => {
-                                  const newTopic = {
-                                    title: "New Topic",
-                                    content: "",
-                                  };
-                                  const current =
-                                    appConfig?.dialectSchoolContent?.[
-                                      activeAdminDialect
-                                    ] || [];
-                                  try {
-                                    if (!activeAdminDialect) return;
-                                    await setDoc(
-                                      doc(
-                                        db,
-                                        "app",
-                                        "global",
-                                        "dialects",
-                                        activeAdminDialect,
-                                      ),
-                                      {
-                                        topics: cleanObject([
-                                          ...current,
-                                          newTopic,
-                                        ]),
-                                      },
-                                      { merge: true },
-                                    );
-                                    playSound(clickAudio);
-                                  } catch (err) {
-                                    console.error("Add topic error:", err);
-                                  }
-                                }}
-                                className="flex items-center gap-2 px-6 py-2 bg-emerald-500 text-white rounded-xl text-[10px] font-black uppercase"
-                              >
-                                <Plus size={14} />{" "}
-                                {interfaceLang === "Sorani"
-                                  ? "زیادکردنی بابەت"
-                                  : "Mijarek nû zêde bike"}
-                              </button>
-                            </div>
+    <div className="flex items-center gap-2 bg-white/5 p-1.5 rounded-2xl border border-white/10 overflow-x-auto no-scrollbar">
+      {[
+        { id: "book", icon: Book, label: interfaceLang === "Sorani" ? "کتێب" : "Pirtûk" },
+        { id: "author", icon: UserIcon, label: interfaceLang === "Sorani" ? "نووسەر" : "Nivîskar" },
+        { id: "format", icon: Layers, label: interfaceLang === "Sorani" ? "جۆری بابەت" : "Cureyê Babetê" },
+        { id: "category", icon: Globe, label: interfaceLang === "Sorani" ? "زمان / شێوەزار" : "Ziman / Şêwezar" },
+      ].map((group) => (
+        <button
+          key={group.id}
+          onClick={() => {
+             setSchoolGrouping(group.id as any);
+             setSelectedSchoolCategory(null);
+             playSound(clickAudio);
+          }}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+             schoolGrouping === group.id
+               ? "bg-white text-black shadow-lg"
+               : "text-white/40 hover:text-white hover:bg-white/5"
+           }`}
+        >
+          <group.icon size={14} />
+          {group.label}
+        </button>
+      ))}
+    </div>
 
-                            <div className="space-y-4">
-                              {(
-                                appConfig?.dialectSchoolContent?.[
-                                  activeAdminDialect
-                                ] || []
-                              ).map((topic: any, idx: number) => (
-                                <div
-                                  key={idx}
-                                  className="bg-white/5 rounded-3xl border theme-border-soft p-5"
-                                >
-                                  <div className="flex items-center justify-between mb-4">
-                                    <SyncInput
-                                      value={topic.title}
-                                      onSync={async (val: string) => {
-                                        if (!activeAdminDialect) return;
-                                        const currentList =
-                                          appConfig?.dialectSchoolContent?.[
-                                            activeAdminDialect
-                                          ] || [];
-                                        const list = [...currentList];
-                                        if (list[idx]) {
-                                          list[idx].title = val;
-                                          try {
-                                            await setDoc(
-                                              doc(
-                                                db,
-                                                "app",
-                                                "global",
-                                                "dialects",
-                                                activeAdminDialect,
-                                              ),
-                                              { topics: cleanObject(list) },
-                                              { merge: true },
-                                            );
-                                          } catch (err) {
-                                            console.error(
-                                              "Sync title error:",
-                                              err,
-                                            );
-                                          }
-                                        }
-                                      }}
-                                      className="bg-transparent text-white font-black text-sm outline-none w-2/3"
-                                    />
-                                    <div className="flex gap-1">
-                                      <button
-                                        disabled={idx === 0}
-                                        onClick={async () => {
-                                          const currentList =
-                                            appConfig?.dialectSchoolContent?.[
-                                              activeAdminDialect || ""
-                                            ] || [];
-                                          const list = [...currentList];
-                                          if (idx > 0) {
-                                            [list[idx], list[idx - 1]] = [
-                                              list[idx - 1],
-                                              list[idx],
-                                            ];
-                                            try {
-                                              await setDoc(
-                                                doc(
-                                                  db,
-                                                  "app",
-                                                  "global",
-                                                  "dialects",
-                                                  activeAdminDialect || "",
-                                                ),
-                                                { topics: cleanObject(list) },
-                                                { merge: true },
-                                              );
-                                            } catch (err) {
-                                              console.error(
-                                                "Order update error:",
-                                                err,
-                                              );
-                                            }
-                                          }
-                                        }}
-                                        className="p-2 text-white/20"
-                                      >
-                                        <ArrowUp size={14} />
-                                      </button>
-                                      <button
-                                        disabled={
-                                          idx ===
-                                          (
-                                            appConfig?.dialectSchoolContent?.[
-                                              activeAdminDialect || ""
-                                            ] || []
-                                          ).length -
-                                            1
-                                        }
-                                        onClick={async () => {
-                                          const currentList =
-                                            appConfig?.dialectSchoolContent?.[
-                                              activeAdminDialect || ""
-                                            ] || [];
-                                          const list = [...currentList];
-                                          if (idx < list.length - 1) {
-                                            [list[idx], list[idx + 1]] = [
-                                              list[idx + 1],
-                                              list[idx],
-                                            ];
-                                            try {
-                                              await setDoc(
-                                                doc(
-                                                  db,
-                                                  "app",
-                                                  "global",
-                                                  "dialects",
-                                                  activeAdminDialect || "",
-                                                ),
-                                                { topics: cleanObject(list) },
-                                                { merge: true },
-                                              );
-                                            } catch (err) {
-                                              console.error(
-                                                "Order update error:",
-                                                err,
-                                              );
-                                            }
-                                          }
-                                        }}
-                                        className="p-2 text-white/20"
-                                      >
-                                        <ArrowDown size={14} />
-                                      </button>
-                                      <button
-                                        onClick={async () => {
-                                          if (!activeAdminDialect) return;
-                                          if (
-                                            confirm(
-                                              interfaceLang === "Sorani"
-                                                ? "ئایە دڵنیای لە سڕینەوە؟"
-                                                : "Ma tu bawer î ku tu dixwazî jê bibî?",
-                                            )
-                                          ) {
-                                            const currentList =
-                                              appConfig?.dialectSchoolContent?.[
-                                                activeAdminDialect
-                                              ] || [];
-                                            const list = currentList.filter(
-                                              (_: any, i: number) => i !== idx,
-                                            );
-                                            try {
-                                              await setDoc(
-                                                doc(
-                                                  db,
-                                                  "app",
-                                                  "global",
-                                                  "dialects",
-                                                  activeAdminDialect,
-                                                ),
-                                                { topics: cleanObject(list) },
-                                                { merge: true },
-                                              );
-                                              playSound(clickAudio);
-                                            } catch (err) {
-                                              console.error(
-                                                "Delete topic error:",
-                                                err,
-                                              );
-                                            }
-                                          }
-                                        }}
-                                        className="p-2 text-rose-500"
-                                      >
-                                        <Trash2 size={16} />
-                                      </button>
-                                    </div>
-                                  </div>
-                                  <SyncTextarea
-                                    value={topic.content}
-                                    onSync={async (val: string) => {
-                                      if (!activeAdminDialect) return;
-                                      const list = [
-                                        ...(appConfig?.dialectSchoolContent?.[
-                                          activeAdminDialect
-                                        ] || []),
-                                      ];
-                                      if (list[idx]) {
-                                        list[idx].content = val;
-                                        try {
-                                          await setDoc(
-                                            doc(
-                                              db,
-                                              "app",
-                                              "global",
-                                              "dialects",
-                                              activeAdminDialect,
-                                            ),
-                                            { topics: cleanObject(list) },
-                                            { merge: true },
-                                          );
-                                        } catch (err) {
-                                          console.error(
-                                            "Sync content error:",
-                                            err,
-                                          );
-                                        }
-                                      }
-                                    }}
-                                    className="w-full bg-black/40 border border-white/5 rounded-2xl p-4 text-xs text-white/60 min-h-[100px] outline-none"
-                                  />
-                                  {/* Custom Metadata Fields */}
-                                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-1">
-                                    <div className="space-y-1">
-                                      <span className="text-[8px] font-black uppercase tracking-tighter opacity-40 ml-2">
-                                        {interfaceLang === "Sorani"
-                                          ? "پۆلێن"
-                                          : "Kategorî"}
-                                      </span>
-                                      <SyncInput
-                                        value={topic.category || ""}
-                                        onSync={async (val: string) => {
-                                          if (!activeAdminDialect) return;
-                                          const currentList =
-                                            appConfig?.dialectSchoolContent?.[
-                                              activeAdminDialect
-                                            ] || [];
-                                          const list = [...currentList];
-                                          if (list[idx]) {
-                                            list[idx].category = val;
-                                            try {
-                                              await setDoc(
-                                                doc(
-                                                  db,
-                                                  "app",
-                                                  "global",
-                                                  "dialects",
-                                                  activeAdminDialect,
-                                                ),
-                                                { topics: cleanObject(list) },
-                                                { merge: true },
-                                              );
-                                            } catch (err) {
-                                              console.error(
-                                                "Sync category error:",
-                                                err,
-                                              );
-                                            }
-                                          }
-                                        }}
-                                        className="w-full bg-black/20 border border-white/5 rounded-xl px-3 py-2 text-[10px] text-white outline-none focus:border-rose-500"
-                                        placeholder={
-                                          interfaceLang === "Sorani"
-                                            ? "مێژوو"
-                                            : "Dîrok"
-                                        }
-                                      />
-                                    </div>
-                                    <div className="space-y-1">
-                                      <span className="text-[8px] font-black uppercase tracking-tighter opacity-40 ml-2">
-                                        {interfaceLang === "Sorani"
-                                          ? "نووسەر"
-                                          : "Nivîskar"}
-                                      </span>
-                                      <SyncInput
-                                        value={topic.author || ""}
-                                        onSync={async (val: string) => {
-                                          const currentList =
-                                            appConfig?.dialectSchoolContent?.[
-                                              activeAdminDialect || ""
-                                            ] || [];
-                                          const list = [...currentList];
-                                          list[idx].author = val;
-                                          try {
-                                            if (!activeAdminDialect) return;
-                                            await setDoc(
-                                              doc(
-                                                db,
-                                                "app",
-                                                "global",
-                                                "dialects",
-                                                activeAdminDialect,
-                                              ),
-                                              { topics: cleanObject(list) },
-                                              { merge: true },
-                                            );
-                                          } catch (err) {
-                                            console.error(
-                                              "Sync author error:",
-                                              err,
-                                            );
-                                          }
-                                        }}
-                                        className="w-full bg-black/20 border border-white/5 rounded-xl px-3 py-2 text-[10px] text-white outline-none focus:border-rose-500"
-                                        placeholder="Zana"
-                                      />
-                                    </div>
-                                    <div className="space-y-1">
-                                      <span className="text-[8px] font-black uppercase tracking-tighter opacity-40 ml-2">
-                                        {interfaceLang === "Sorani"
-                                          ? "کتێب"
-                                          : "Pirtûk"}
-                                      </span>
-                                      <SyncInput
-                                        value={topic.book || ""}
-                                        onSync={async (val: string) => {
-                                          const currentList =
-                                            appConfig?.dialectSchoolContent?.[
-                                              activeAdminDialect || ""
-                                            ] || [];
-                                          const list = [...currentList];
-                                          list[idx].book = val;
-                                          try {
-                                            if (!activeAdminDialect) return;
-                                            await setDoc(
-                                              doc(
-                                                db,
-                                                "app",
-                                                "global",
-                                                "dialects",
-                                                activeAdminDialect,
-                                              ),
-                                              { topics: cleanObject(list) },
-                                              { merge: true },
-                                            );
-                                          } catch (err) {
-                                            console.error(
-                                              "Sync book error:",
-                                              err,
-                                            );
-                                          }
-                                        }}
-                                        className="w-full bg-black/20 border border-white/5 rounded-xl px-3 py-2 text-[10px] text-white outline-none focus:border-rose-500"
-                                        placeholder="Rênas"
-                                      />
-                                    </div>
-                                    <div className="space-y-1">
-                                      <span className="text-[8px] font-black uppercase tracking-tighter opacity-40 ml-2">
-                                        {interfaceLang === "Sorani"
-                                          ? "وێنە"
-                                          : "Wêne"}
-                                      </span>
-                                      <div className="flex gap-2 items-center">
-                                        <SyncInput
-                                          value={topic.image || ""}
-                                          onSync={async (val: string) => {
-                                            const currentList =
-                                              appConfig?.dialectSchoolContent?.[
-                                                activeAdminDialect || ""
-                                              ] || [];
-                                            const list = [...currentList];
-                                            list[idx].image = val;
-                                            try {
-                                              if (!activeAdminDialect) return;
-                                              await setDoc(
-                                                doc(
-                                                  db,
-                                                  "app",
-                                                  "global",
-                                                  "dialects",
-                                                  activeAdminDialect,
-                                                ),
-                                                { topics: cleanObject(list) },
-                                                { merge: true },
-                                              );
-                                            } catch (err) {
-                                              console.error(
-                                                "Sync image error:",
-                                                err,
-                                              );
-                                            }
-                                          }}
-                                          className="flex-1 bg-black/20 border border-white/5 rounded-xl px-3 py-2 text-[10px] text-white outline-none focus:border-rose-500"
-                                          placeholder="URL"
-                                        />
-                                        <label className="p-2 bg-white/5 rounded-xl cursor-pointer hover:bg-white/10 text-white/40 hover:text-white transition-all">
-                                          <Upload size={14} />
-                                          <input
-                                            type="file"
-                                            accept="image/*"
-                                            className="hidden"
-                                            onChange={async (e) => {
-                                              const file = e.target.files?.[0];
-                                              if (file) {
-                                                try {
-                                                  setIsReadingFile(true);
-                                                  const url =
-                                                    await uploadImageToStorage(
-                                                      file,
-                                                      `global/topics/${activeAdminDialect}/${Date.now()}_${file.name}`,
-                                                    );
-                                                  const currentList =
-                                                    appConfig
-                                                      ?.dialectSchoolContent?.[
-                                                      activeAdminDialect || ""
-                                                    ] || [];
-                                                  const list = [...currentList];
-                                                  list[idx].image = url;
-                                                  if (activeAdminDialect) {
-                                                    await setDoc(
-                                                      doc(
-                                                        db,
-                                                        "app",
-                                                        "global",
-                                                        "dialects",
-                                                        activeAdminDialect,
-                                                      ),
-                                                      {
-                                                        topics:
-                                                          cleanObject(list),
-                                                      },
-                                                      { merge: true },
-                                                    );
-                                                  }
-                                                } catch (err) {
-                                                  console.error(
-                                                    "Topic image upload error:",
-                                                    err,
-                                                  );
-                                                } finally {
-                                                  setIsReadingFile(false);
-                                                }
-                                              }
-                                            }}
-                                          />
-                                        </label>
-                                        {topic.image && (
-                                          <div className="w-8 h-8 rounded-lg overflow-hidden border border-white/10 flex-shrink-0">
-                                            <img
-                                              src={formatImageUrl(topic.image)}
-                                              className="w-full h-full object-cover"
-                                              referrerPolicy="no-referrer"
-                                            />
-                                          </div>
-                                        )}
-                                      </div>
-                                    </div>
-                                    <div className="space-y-1">
-                                      <span className="text-[8px] font-black uppercase tracking-tighter opacity-40 ml-2">
-                                        {interfaceLang === "Sorani"
-                                          ? "ڤیدیۆ (YouTube)"
-                                          : "Vîdyo (YouTube)"}
-                                      </span>
-                                      <SyncInput
-                                        value={topic.video || ""}
-                                        onSync={async (val: string) => {
-                                          const currentList =
-                                            appConfig?.dialectSchoolContent?.[
-                                              activeAdminDialect || ""
-                                            ] || [];
-                                          const list = [...currentList];
-                                          list[idx].video = val;
-                                          try {
-                                            if (!activeAdminDialect) return;
-                                            await setDoc(
-                                              doc(
-                                                db,
-                                                "app",
-                                                "global",
-                                                "dialects",
-                                                activeAdminDialect,
-                                              ),
-                                              { topics: cleanObject(list) },
-                                              { merge: true },
-                                            );
-                                          } catch (err) {
-                                            console.error(
-                                              "Sync video error:",
-                                              err,
-                                            );
-                                          }
-                                        }}
-                                        className="w-full bg-black/20 border border-white/5 rounded-xl px-3 py-2 text-[10px] text-white outline-none focus:border-rose-500"
-                                        placeholder="YouTube URL"
-                                      />
-                                    </div>
-                                    <div className="space-y-1">
-                                      <span className="text-[8px] font-black uppercase tracking-tighter opacity-40 ml-2">
-                                        {interfaceLang === "Sorani"
-                                          ? "دەنگ (MP3)"
-                                          : "Deng (MP3)"}
-                                      </span>
-                                      <SyncInput
-                                        value={topic.audio || ""}
-                                        onSync={async (val: string) => {
-                                          const currentList =
-                                            appConfig?.dialectSchoolContent?.[
-                                              activeAdminDialect || ""
-                                            ] || [];
-                                          const list = [...currentList];
-                                          list[idx].audio = val;
-                                          try {
-                                            if (!activeAdminDialect) return;
-                                            await setDoc(
-                                              doc(
-                                                db,
-                                                "app",
-                                                "global",
-                                                "dialects",
-                                                activeAdminDialect,
-                                              ),
-                                              { topics: cleanObject(list) },
-                                              { merge: true },
-                                            );
-                                          } catch (err) {
-                                            console.error(
-                                              "Sync audio error:",
-                                              err,
-                                            );
-                                          }
-                                        }}
-                                        className="w-full bg-black/20 border border-white/5 rounded-xl px-3 py-2 text-[10px] text-white outline-none focus:border-rose-500"
-                                        placeholder="Audio URL (Direct)"
-                                      />
-                                    </div>
-                                  </div>
-                                  <div className="mt-4 flex flex-wrap gap-2 px-2">
-                                    {[
-                                      "[img]URL[/img]",
-                                      "[video]URL[/video]",
-                                      "[b]Bold[/b]",
-                                      "[i]Italic[/i]",
-                                      "[center]Center[/center]",
-                                    ].map((tag) => (
-                                      <span
-                                        key={tag}
-                                        className="text-[7px] font-black bg-white/5 px-2 py-0.5 rounded-full text-white/30 uppercase tracking-tighter transition-colors hover:text-rose-400 cursor-default"
-                                      >
-                                        {tag}
-                                      </span>
-                                    ))}
-                                  </div>
-                                  <p className="mt-2 text-[8px] opacity-40 text-white px-2 font-medium leading-relaxed">
-                                    ✨ بۆ وێنە: (imgbb.com) یان (postimages.org)
-                                    و تەنها **Direct Link**.
-                                    <br />✨ بۆ ڤیدیۆ: تەنها لینکى **YouTube**
-                                    یان لینکى ڕاستەوخۆی **MP4** دابنێ.
-                                  </p>
-                                </div>
-                              ))}
-                            </div>
+    {!selectedSchoolCategory ? (
+       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+          {(() => {
+             const items = Array.from(new Set(allSchoolTopics.map((t) => {
+                if (schoolGrouping === "book") return t.book;
+                if (schoolGrouping === "author") return t.author;
+                if (schoolGrouping === "format") return t.format;
+                return t.category || t.dialect;
+             }).filter(v => typeof v === "string" && v.trim() !== ""))).sort();
+
+             return items.map((item: any, i) => (
+                <button
+                   key={`key-prefix-5-${i}`}
+                   onClick={() => {
+                      setSelectedSchoolCategory(item);
+                      playSound(clickAudio);
+                   }}
+                   className="bg-white/5 hover:bg-white/10 border hover:theme-border-primary border-white/10 rounded-3xl p-4 text-center transition-all flex flex-col items-center justify-center min-h-[100px]"
+                >
+                   <span className="text-sm font-black text-white font-afarin1 uppercase tracking-wider">{item}</span>
+                </button>
+             ));
+          })()}
+       </div>
+    ) : (
+       <div className="space-y-4">
+           <div className="flex items-center justify-between pb-4 border-b theme-border-soft">
+              <div className="flex items-center gap-4">
+                 <button onClick={() => setSelectedSchoolCategory(null)} className="p-2 bg-white/5 hover:bg-white/10 rounded-xl">
+                    <ArrowLeft size={16} className="rtl:rotate-180" />
+                 </button>
+                 <h3 className="font-black text-white uppercase tracking-widest text-lg font-afarin1">
+                    {selectedSchoolCategory}
+                 </h3>
+              </div>
+              <button
+                 onClick={async () => {
+                    const dialectKey = "گشتی"; 
+                    const newTopic = { 
+                       title: "New Topic " + Date.now().toString().slice(-4), 
+                       content: "", 
+                       book: schoolGrouping === 'book' ? selectedSchoolCategory : "", 
+                       author: schoolGrouping === 'author' ? selectedSchoolCategory : "", 
+                       format: schoolGrouping === 'format' ? selectedSchoolCategory : "",
+                       category: schoolGrouping === 'category' ? selectedSchoolCategory : "",
+                       dialect: dialectKey 
+                    };
+                    const current = appConfig?.dialectSchoolContent?.[dialectKey] || [];
+                    try {
+                       await setDoc(doc(db, "app", "global", "dialects", dialectKey), { topics: cleanObject([...current, newTopic]) }, { merge: true });
+                       playSound(clickAudio);
+                    } catch (e) {
+                       console.error(e);
+                    }
+                 }}
+                 className="flex items-center gap-2 px-6 py-2 bg-emerald-500 text-white rounded-xl text-[10px] font-black uppercase"
+              >
+                  <Plus size={14} />
+                  {interfaceLang === "Sorani" ? "زیادکردنی بابەت" : "Mijarek nû zêde bike"}
+              </button>
+           </div>
+
+           <div className="space-y-4">
+              {(() => {
+                 const topics = allSchoolTopics.filter(t => {
+                    if (schoolGrouping === "book") return t.book === selectedSchoolCategory;
+                    if (schoolGrouping === "author") return t.author === selectedSchoolCategory;
+                    if (schoolGrouping === "format") return t.format === selectedSchoolCategory;
+                    return (t.category || t.dialect) === selectedSchoolCategory;
+                 });
+
+                 return topics.map((topic, _idx) => {
+                    const dialectKey = topic.dialect || "گشتی";
+                    const handleSyncField = async (field: string, val: string) => {
+                         const rawList = appConfig?.dialectSchoolContent?.[dialectKey] || [];
+                         const globalIdx = rawList.findIndex((rt: any) => rt.title === topic.title);
+                         if(globalIdx === -1) return;
+                         
+                         const list = [...rawList];
+                         list[globalIdx][field] = val;
+                         try {
+                             await setDoc(doc(db, "app", "global", "dialects", dialectKey), { topics: cleanObject(list) }, { merge: true });
+                         } catch (err) {
+                             console.error("Sync error:", err);
+                         }
+                    };
+
+                    const handleDelete = async () => {
+                         if (!confirm(interfaceLang === "Sorani" ? "ئایە دڵنیای لە سڕینەوە؟" : "Ma tu bawer î ku tu dixwazî jê bibî?")) return;
+                         
+                         const rawList = appConfig?.dialectSchoolContent?.[dialectKey] || [];
+                         const globalIdx = rawList.findIndex((rt: any) => rt.title === topic.title);
+                         if(globalIdx === -1) return;
+                         
+                         const list = rawList.filter((_: any, i: number) => i !== globalIdx);
+                         try {
+                             await setDoc(doc(db, "app", "global", "dialects", dialectKey), { topics: cleanObject(list) }, { merge: true });
+                             playSound(clickAudio);
+                         } catch (err) {
+                             console.error("Delete error:", err);
+                         }
+                    };
+
+                    return (
+                       <div key={`idx-${_idx}`} className="bg-white/5 rounded-3xl border theme-border-soft p-5">
+                          <div className="flex items-center justify-between mb-4">
+                             <SyncInput
+                                value={topic.title}
+                                onSync={(val) => handleSyncField('title', val)}
+                                className="bg-transparent text-white font-black text-xl outline-none focus:theme-border-primary border-b border-transparent w-full font-afarin1"
+                                placeholder="Topic Title"
+                             />
+                             <div className="flex gap-2 ml-4">
+                               <button
+                                 onClick={handleDelete}
+                                 className="p-2 flex-shrink-0 bg-rose-500/10 rounded-xl text-rose-500 hover:bg-rose-500 hover:text-white transition-all"
+                               >
+                                 <Trash2 size={14} />
+                               </button>
+                             </div>
                           </div>
-                        )}
-                      </motion.div>
-                    )}
+                          
+                          <SyncTextarea
+                             value={topic.content}
+                             onSync={(val) => handleSyncField('content', val)}
+                             className="w-full bg-black/20 border border-white/5 rounded-2xl p-4 min-h-[150px] text-xs text-white/70 outline-none"
+                             placeholder="Content (HTML/Markdown)"
+                          />
+
+                          <div className="mt-4 grid grid-cols-2 gap-4">
+                             <div className="space-y-1">
+                                <span className="text-[8px] font-black uppercase tracking-tighter opacity-40 ml-2">Type/Format (جۆری بابەت)</span>
+                                <SyncInput
+                                   value={topic.format || ""}
+                                   onSync={(val) => handleSyncField('format', val)}
+                                   className="w-full bg-black/20 border border-white/5 rounded-xl px-3 py-2 text-[10px] text-white outline-none"
+                                />
+                             </div>
+                             <div className="space-y-1">
+                                <span className="text-[8px] font-black uppercase tracking-tighter opacity-40 ml-2">Category (Ziman/Şêwezar)</span>
+                                <SyncInput
+                                   value={topic.category || topic.dialect || ""}
+                                   onSync={(val) => handleSyncField('category', val)}
+                                   className="w-full bg-black/20 border border-white/5 rounded-xl px-3 py-2 text-[10px] text-white outline-none"
+                                />
+                             </div>
+                             <div className="space-y-1">
+                                <span className="text-[8px] font-black uppercase tracking-tighter opacity-40 ml-2">Author (Nivîskar)</span>
+                                <SyncInput
+                                   value={topic.author || ""}
+                                   onSync={(val) => handleSyncField('author', val)}
+                                   className="w-full bg-black/20 border border-white/5 rounded-xl px-3 py-2 text-[10px] text-white outline-none"
+                                />
+                             </div>
+                             <div className="space-y-1">
+                                <span className="text-[8px] font-black uppercase tracking-tighter opacity-40 ml-2">Book (Pirtûk)</span>
+                                <SyncInput
+                                   value={topic.book || ""}
+                                   onSync={(val) => handleSyncField('book', val)}
+                                   className="w-full bg-black/20 border border-white/5 rounded-xl px-3 py-2 text-[10px] text-white outline-none"
+                                />
+                             </div>
+                             <div className="space-y-1">
+                                <span className="text-[8px] font-black uppercase tracking-tighter opacity-40 ml-2">Image URL</span>
+                                <SyncInput
+                                   value={topic.image || ""}
+                                   onSync={(val) => handleSyncField('image', val)}
+                                   className="w-full bg-black/20 border border-white/5 rounded-xl px-3 py-2 text-[10px] text-white outline-none"
+                                />
+                             </div>
+                             <div className="space-y-1">
+                                <span className="text-[8px] font-black uppercase tracking-tighter opacity-40 ml-2">Video URL</span>
+                                <SyncInput
+                                   value={topic.video || ""}
+                                   onSync={(val) => handleSyncField('video', val)}
+                                   className="w-full bg-black/20 border border-white/5 rounded-xl px-3 py-2 text-[10px] text-white outline-none"
+                                />
+                             </div>
+                             <div className="space-y-1">
+                                <span className="text-[8px] font-black uppercase tracking-tighter opacity-40 ml-2">Audio URL</span>
+                                <SyncInput
+                                   value={topic.audio || ""}
+                                   onSync={(val) => handleSyncField('audio', val)}
+                                   className="w-full bg-black/20 border border-white/5 rounded-xl px-3 py-2 text-[10px] text-white outline-none"
+                                />
+                             </div>
+                           </div>
+                       </div>
+                    )
+                 });
+              })()}
+           </div>
+       </div>
+    )}
+  </motion.div>
+)}
                     {adminSubTab === "dictionary" && (
                       <motion.div
                         initial={{ opacity: 0, x: -10 }}
@@ -7972,31 +7317,26 @@ export default function App() {
                           {academicDict
                             .filter(
                               (word) =>
-                                word.sorani
+                                (word.sorani || "")
                                   .toLowerCase()
                                   .includes(dictSearch.toLowerCase()) ||
-                                word.kurmanji
+                                (word.kurmanji || "")
                                   .toLowerCase()
                                   .includes(dictSearch.toLowerCase()) ||
                                 (word.english &&
-                                  word.english
+                                  (word.english || "")
                                     .toLowerCase()
                                     .includes(dictSearch.toLowerCase())),
                             )
                             .slice(0, 100) // Performance limit for rendering
                             .map((word, idx) => {
                               const wordId = (word as any).id || word.sorani;
-                              const custom = (
-                                appConfig?.customDictionary || []
-                              ).find(
-                                (cw: any) =>
-                                  cw.id === wordId || cw.sorani === word.sorani,
-                              );
-                              const currentWord = custom || word;
+                              const custom = (word as any).isCustom;
+                              const currentWord = word;
 
                               return (
                                 <div
-                                  key={wordId + idx}
+                                  key={wordId + '-' + idx}
                                   className={`p-4 rounded-[1.5rem] border transition-all ${custom ? "border-amber-400/40 bg-amber-400/5" : "theme-border-soft bg-white/5"}`}
                                 >
                                   <div className="flex items-center justify-between mb-4">
@@ -8109,7 +7449,7 @@ export default function App() {
                             .flatMap((u) => u.lessons)
                             .map((lesson) => (
                               <div
-                                key={lesson.id}
+                                key={lesson.id + '-' + (lesson.title || '')}
                                 className="p-4 theme-bg-card rounded-2xl border theme-border-soft flex justify-between items-center"
                               >
                                 <div>
@@ -8717,7 +8057,7 @@ export default function App() {
         <nav className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 w-[85%] max-w-xs h-12 theme-bg-soft backdrop-blur-2xl border theme-border-soft rounded-xl flex items-center justify-around px-2 z-50 shadow-xl">
           {activeTabsList.map((tab) => (
             <MobileNavBtn
-              key={tab.id}
+              key={tab.id + '-' + tab.label}
               active={activeTab === tab.id}
               label={tab.label}
               onClick={() => {
@@ -8747,7 +8087,7 @@ export default function App() {
               <div className="w-full h-full bg-yellow-400 rounded-full shadow-[0_0_100px_rgba(245,231,0,0.5)] flex items-center justify-center">
                 {[...Array(21)].map((_, i) => (
                   <div
-                    key={i}
+                    key={`key-prefix-6-${i}`}
                     className="absolute top-1/2 left-1/2 w-full h-[2px] bg-yellow-400 origin-left"
                     style={{
                       transform: `translate(-50%, -50%) rotate(${i * (360 / 21)}deg) translateX(50%)`,
@@ -9022,7 +8362,7 @@ export default function App() {
                       </label>
                       <div className="grid grid-cols-1 gap-3">
                         {editingExercise.pairs.map((pair, i) => (
-                          <div key={i} className="flex gap-2">
+                          <div key={`key-prefix-7-${i}`} className="flex gap-2">
                             <input
                               type="text"
                               value={pair.left}
@@ -9099,6 +8439,29 @@ export default function App() {
                         />
                       </div>
 
+                      {/* Video URL Input */}
+                      <div>
+                        <label className="block text-[10px] font-black theme-primary uppercase tracking-widest mb-2 opacity-50 font-afarin1 flex items-center justify-between">
+                          <span>
+                            لینکی ڤیدیۆی یوتوب (YouTube Link) / Lînkê Vîdyoyê
+                          </span>
+                        </label>
+                        <input
+                          type="text"
+                          dir="ltr"
+                          placeholder="https://www.youtube.com/watch?v=..."
+                          value={editingExercise.mediaUrl || ""}
+                          onChange={(e) =>
+                            setEditingExercise({
+                              ...editingExercise,
+                              mediaUrl: e.target.value,
+                              mediaType: e.target.value ? "video" : undefined,
+                            })
+                          }
+                          className="w-full bg-black/40 border theme-border-soft rounded-2xl px-6 py-4 text-white font-bold outline-none focus:theme-border-primary font-afarin2 text-left"
+                        />
+                      </div>
+
                       {/* Options */}
                       {editingExercise.options && (
                         <div>
@@ -9108,7 +8471,7 @@ export default function App() {
                           <div className="grid grid-cols-1 gap-3">
                             {editingExercise.options.map((opt, i) => (
                               <input
-                                key={i}
+                                key={`key-prefix-8-${i}`}
                                 type="text"
                                 value={opt}
                                 onChange={(e) => {
